@@ -6,37 +6,38 @@ interface Props {
   onDone: () => void;
 }
 
-const COLORS = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#f72585', '#4cc9f0'];
-
 // Module-level (outside render) so the randomness is intentional and the
 // react-hooks/purity lint doesn't flag inline Math.random during render.
-function makeBalloons(count: number) {
+function makeBubbles(count: number) {
   return Array.from({ length: count }, (_, i) => ({
     left: (i / count) * 100 + Math.random() * 6 - 3,
     delay: Math.random() * 0.6,
-    dur: 2.4 + Math.random() * 1.2,
-    color: COLORS[i % COLORS.length],
+    dur: 2.2 + Math.random() * 1.4,
+    size: 14 + Math.random() * 28,
   }));
 }
 
-export function Balloons({ durationMs = 3000, count = 16, onDone }: Props) {
+/** A celebratory burst of water bubbles rising up the screen, shown on a
+ *  sentence-game win. */
+export function Bubbles({ durationMs = 3000, count = 18, onDone }: Props) {
   useEffect(() => {
     const t = window.setTimeout(onDone, durationMs);
     return () => window.clearTimeout(t);
   }, [durationMs, onDone]);
 
   // Randomized once per mount (not per render) so re-renders don't reshuffle.
-  const balloons = useMemo(() => makeBalloons(count), [count]);
+  const bubbles = useMemo(() => makeBubbles(count), [count]);
 
   return (
-    <div className="balloons-overlay">
-      {balloons.map((b, i) => (
+    <div className="bubbles-overlay">
+      {bubbles.map((b, i) => (
         <span
           key={i}
-          className="balloon"
+          className="bubble"
           style={{
             left: `${b.left}%`,
-            background: b.color,
+            width: `${b.size}px`,
+            height: `${b.size}px`,
             animationDelay: `${b.delay}s`,
             animationDuration: `${b.dur}s`,
           }}

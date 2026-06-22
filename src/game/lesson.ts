@@ -6,20 +6,20 @@ import { PICS_ONLY_ENABLED } from '../lib/env';
 
 export const LESSON_LENGTH = 15;
 
-// Balloon Pop round: the prompt shown at the bottom is either the word's native
-// translation ('word') or its picture ('image'); the balloons always carry
+// Climb round: the prompt shown above the cliff is either the word's native
+// translation ('word') or its picture ('image'); the handholds always carry
 // English words, one of which matches the prompt.
-export type BalloonPromptKind = 'word' | 'image';
-export interface BalloonRound {
+export type ClimbPromptKind = 'word' | 'image';
+export interface ClimbRound {
   target: ApiWord;
-  promptKind: BalloonPromptKind;
+  promptKind: ClimbPromptKind;
 }
 
-// A concrete renderable step. The lesson is now a single Balloon Pop step that
-// plays LESSON_LENGTH rounds back-to-back; the other kinds are retained for the
-// stage-only PICS ONLY review path and any future challenges.
+// A concrete renderable step. The lesson is now a single Climb to Safety step
+// that plays LESSON_LENGTH rounds back-to-back; the other kinds are retained for
+// the stage-only PICS ONLY review path and any future challenges.
 export type LessonStep =
-  | { kind: 'balloons'; rounds: BalloonRound[] }
+  | { kind: 'climb'; rounds: ClimbRound[] }
   | { kind: 'match'; targets: ApiWord[] }
   | { kind: 'pick'; pickMode: PickMode; target: ApiWord }
   | { kind: 'hearchoose'; sentence: Sentence }
@@ -44,16 +44,16 @@ function makeBag<T>(pool: T[]): () => T {
 const hasNative = (w: ApiWord, language: string) => !!w.translations?.[language]?.[0]?.word;
 const hasImage = (w: ApiWord) => !!w.pictureUrl;
 
-/** Build the LESSON_LENGTH balloon rounds from a pool of playable words. Each
+/** Build the LESSON_LENGTH climb rounds from a pool of playable words. Each
  *  round's prompt is the word's native translation, its picture, or — when both
  *  exist — a coin flip between them. */
-function buildRounds(pool: ApiWord[], language: string): BalloonRound[] {
+function buildRounds(pool: ApiWord[], language: string): ClimbRound[] {
   const nextTarget = makeBag(pool);
-  return Array.from({ length: LESSON_LENGTH }, (): BalloonRound => {
+  return Array.from({ length: LESSON_LENGTH }, (): ClimbRound => {
     const target = nextTarget();
     const canWord = hasNative(target, language);
     const canImage = hasImage(target);
-    const promptKind: BalloonPromptKind =
+    const promptKind: ClimbPromptKind =
       canWord && canImage ? (Math.random() < 0.5 ? 'word' : 'image') : canWord ? 'word' : 'image';
     return { target, promptKind };
   });
@@ -62,7 +62,7 @@ function buildRounds(pool: ApiWord[], language: string): BalloonRound[] {
 export async function buildLesson(profile: Profile, lessonsCompleted: number): Promise<Lesson> {
   const { userId, language, avatarId, difficulty, areas } = profile;
 
-  // Stage-only "PICS ONLY" review mode: image-prompt balloon rounds drawn from
+  // Stage-only "PICS ONLY" review mode: image-prompt climb rounds drawn from
   // EVERY pictured word in the corpus — across all areas and difficulty levels,
   // independent of the user's level/area-scoped bin. Gated twice (the flag is
   // stage/dev-only and the category is only offered there) so it can never run
@@ -73,13 +73,13 @@ export async function buildLesson(profile: Profile, lessonsCompleted: number): P
       throw new Error('PICS ONLY: no pictured words are available yet.');
     }
     const nextImage = makeBag(pics);
-    const rounds: BalloonRound[] = Array.from({ length: LESSON_LENGTH }, () => ({
+    const rounds: ClimbRound[] = Array.from({ length: LESSON_LENGTH }, () => ({
       target: nextImage(),
       promptKind: 'image',
     }));
     return {
       number: lessonsCompleted + 1,
-      steps: [{ kind: 'balloons', rounds }],
+      steps: [{ kind: 'climb', rounds }],
       bin: pics,
       debug: { lang: language, binCount: pics.length, translatedCount: 0, imageCount: pics.length },
     };
@@ -97,8 +97,8 @@ export async function buildLesson(profile: Profile, lessonsCompleted: number): P
     throw new Error(`No words available for ${difficulty} / areas [${areas.join(', ') || 'all'}].`);
   }
 
-  // A word is playable as a balloon round when we can show a prompt for it: its
-  // native translation (word prompt) or its picture (image prompt). The balloons
+  // A word is playable as a climb round when we can show a prompt for it: its
+  // native translation (word prompt) or its picture (image prompt). The handholds
   // themselves are English words drawn from the whole bin.
   const translated = bin.filter((w) => hasNative(w, language));
   const imageWords = bin.filter(hasImage);
@@ -112,7 +112,7 @@ export async function buildLesson(profile: Profile, lessonsCompleted: number): P
 
   return {
     number: lessonsCompleted + 1,
-    steps: [{ kind: 'balloons', rounds: buildRounds(playable, language) }],
+    steps: [{ kind: 'climb', rounds: buildRounds(playable, language) }],
     bin,
     debug: {
       lang: language,

@@ -1,4 +1,4 @@
-import type { AvatarId, LanguageCode } from '../types';
+import type { AreaCode, AvatarId, Difficulty, LanguageCode } from '../types';
 import { avatars } from '../data/avatars';
 
 export interface LaunchParams {
@@ -7,6 +7,11 @@ export interface LaunchParams {
   avatarId?: AvatarId;
   userName?: string;   // PLP shopper identity — used to attribute feedback
   userEmail?: string;
+  // From the landing hub: pre-selected start settings + skip-landing flag.
+  difficulty?: Difficulty;
+  areas?: AreaCode[];
+  audio?: boolean;
+  autostart?: boolean;
 }
 
 const SUPPORTED_LANGUAGES: LanguageCode[] = [
@@ -52,6 +57,18 @@ export function parseLaunchParams(search: string): LaunchParams {
   if (rawName?.trim()) out.userName = rawName.trim();
   const rawEmail = params.get('shopperEmail') ?? params.get('userEmail') ?? params.get('email');
   if (rawEmail?.trim()) out.userEmail = rawEmail.trim();
+
+  // From the landing hub: pre-selected start settings + skip-landing flag.
+  const rawLevel = params.get('level');
+  if (rawLevel === 'easy' || rawLevel === 'medium' || rawLevel === 'hard') out.difficulty = rawLevel;
+
+  const rawAreas = params.get('areas');
+  if (rawAreas) out.areas = rawAreas.split(',').map((s) => s.trim()).filter(Boolean);
+
+  const rawAudio = params.get('audio');
+  if (rawAudio != null) out.audio = rawAudio !== '0' && rawAudio !== 'false';
+
+  if (params.get('autostart') === '1') out.autostart = true;
 
   return out;
 }

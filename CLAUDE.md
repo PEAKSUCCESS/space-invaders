@@ -1,10 +1,10 @@
-# peakvocab-challenges
+# survival
 
-Vite + React + TypeScript web app that runs vocabulary challenges against the **peakvocab-api** corpus. Sibling to (and lighter than) the 3D R3F hiking app.
+**Survival** is a Vite + React + TypeScript vocabulary game over the **peakvocab-api** corpus — cloned from the Balloons app (peakvocab-balloons) and reskinned as **"Climb to Safety"** (the main loop; see "The game: Climb to Safety" under What it does). Sibling to (and lighter than) the 3D R3F hiking app.
 
 ## Repo boundary (hard rule)
 
-**Work is restricted to THIS repo (`peakvocab-challenges`). Never edit, create, or delete files in any other repo** — notably the sibling backend `../peakvocab-api`, or any HQ/export repo. When a change is needed in another project (e.g. the `/api/vocab/tts` endpoint), **describe it** — exact code/diff as text — so Brad can copy/paste it into that project himself. Reading other repos for context is fine; modifying them is not.
+**Work is restricted to THIS repo (`survival`). Never edit, create, or delete files in any other repo** — notably the sibling backend `../peakvocab-api`, or any HQ/export repo. When a change is needed in another project (e.g. the `/api/vocab/tts` endpoint), **describe it** — exact code/diff as text — so Brad can copy/paste it into that project himself. Reading other repos for context is fine; modifying them is not.
 
 ## What it does
 
@@ -18,7 +18,20 @@ Hitting **Start** builds a **lesson** of `LESSON_LENGTH = 15` word challenges (`
 
 1. `enrollUser({userId, nativeLanguage, avatar, level, areas})` — idempotent; first call auto-fills the 20-word bin. Avatar is lowercased on the wire (`jade`).
 2. `setLevel(userId, level)` then `setAreas(userId, areas)` — apply the start-screen selections (each benches + refills the bin, keeping progress); the `setAreas` response carries the resulting **bin**.
-3. Build a 15-slot, shuffled category list from the bin and resolve each slot to a concrete step.
+3. Build the 15 climb rounds from the bin (`buildRounds`) — one self-paced `climb` step (`LessonStep`); see "The game: Climb to Safety".
+
+### The game: Climb to Safety
+
+The whole lesson is a **single self-paced `climb` step** of `LESSON_LENGTH = 15` rounds, rendered by `src/components/ClimbToSafety.tsx`. The learner is a climber clinging to a cliff while **water rises continuously** from the bottom:
+
+- Each round shows a **prompt** (the word's native translation or its picture — `ClimbRound`/`ClimbPromptKind` in `lesson.ts`) and 6 English **handhold** tiles, one correct.
+- Grabbing the **correct** handhold pulls the climber up a ledge (the survival `buffer` jumps by `CLIMB_BOOST`, the water recedes), fires confetti, speaks the word, and advances after `ADVANCE_DELAY_MS`. The **first grab** of each round is graded to the API via `onAnswer` (mode `translation` for a word prompt, `identification` for an image) — one answer per word.
+- A **wrong** grab crumbles that hold and surges the water (`WRONG_PENALTY`); the round stays open until the correct hold is grabbed.
+- The `buffer` (seconds of separation from the water) **drains continuously** at `DRAIN_PER_SEC` via a `requestAnimationFrame` loop that writes the water height imperatively (no per-frame re-render of the holds). It pauses during the celebrate gap and while the **feedback modal** is open (`paused` prop, wired to `feedbackOpen` in `App`).
+- When the **water covers the climber** (`buffer ≤ 0`) the game ends: a "Swept away!" overlay with **Try again**, which replays the lesson from the first ledge (answers already submitted this run still counted). Surviving all 15 rounds → normal `onComplete` → the `LessonComplete` celebration.
+- Tuning constants (`START_BUFFER`, `MAX_BUFFER`, `CLIMB_BOOST`, `WRONG_PENALTY`, `DRAIN_PER_SEC`) sit at the top of `ClimbToSafety.tsx`; the water-height layout constants (`WATER_FLOOR`, `DANGER`) mirror the `.climb-*` CSS in `index.css`.
+
+> The PickOne / Matching / sentence challenges described below are **retained components** (`App` still renders them per `LessonStep.kind`), but `buildLesson` currently produces only `climb` steps — they're kept for the stage-only PICS ONLY path and future challenge types.
 
 ### Challenge modes (all word-based)
 
@@ -60,7 +73,7 @@ After the steps are built, `dedupeSentenceSteps` (`lesson.ts`) scans them and re
 - Web Speech API (`window.speechSynthesis`) directly — no library
 - Plain CSS in `src/index.css`, no Tailwind / CSS-in-JS
 - State: `useState` only; no Zustand / Redux / Context. Phase machine lives in `src/App.tsx`.
-- Persistence: `localStorage` under key `peakvocabChallengesSave` (`src/game/save.ts`) — stores last difficulty/areas/audio + `lessonsCompleted` (instant same-device seed). A second key `peakvocabChallengesProgress` caches the last `/progress` so the bar seeds its % across remounts/reloads. **Resume is server-authoritative**: the StartScreen calls `getBin(userId)` on mount and pre-fills the shopper's last **level + topics** from the API (persisted on every Start, so it works cross-device); the shopper can still change either before Start.
+- Persistence: `localStorage` under key `peakvocabSurvivalSave` (`src/game/save.ts`) — stores last difficulty/areas/audio + `lessonsCompleted` (instant same-device seed). A second key `peakvocabSurvivalProgress` caches the last `/progress` so the bar seeds its % across remounts/reloads. **Resume is server-authoritative**: the StartScreen calls `getBin(userId)` on mount and pre-fills the shopper's last **level + topics** from the API (persisted on every Start, so it works cross-device); the shopper can still change either before Start.
 
 ## Vocabulary source
 
@@ -85,7 +98,7 @@ The "Your progress" bar shows **only the level the learner is in** (the selected
 
 - **Percent is streak-based**: `GET /api/app/users/:id/progress` returns `levels[]` (easy/medium/hard) whose `percent` = `sum(streak over words matching area+difficulty) / (count × 20)` (a completed word counts as the full threshold). This makes the bar move a little after **every** lesson, not just when a word hits streak 20. ⚠️ That formula lives in **peakvocab-api** (`getProgress` in `src/app/engine.ts`) — the frontend only reads `levels[].percent`. If the API still returns the old completed-count percent, the bar works but only jumps when words complete.
 - **Spillover cap:** at ≥85% a sliver of the **next** level's color appears at the right end and grows (15%→30% of the bar toward 100%) as a teaser — `capWidth()` in `StartScreen.tsx`. On level-up the bar relabels to the new level and the API's percent restarts low.
-- The fetched `ProgressResponse` is **held in `App` state and cached to `localStorage`** (key `peakvocabChallengesProgress`, `loadProgress`/`writeProgress` in `save.ts`), seeded back on mount — so it survives StartScreen remounts and page reloads and animates e.g. 3%→5% rather than flashing 0%→5%.
+- The fetched `ProgressResponse` is **held in `App` state and cached to `localStorage`** (key `peakvocabSurvivalProgress`, `loadProgress`/`writeProgress` in `save.ts`), seeded back on mount — so it survives StartScreen remounts and page reloads and animates e.g. 3%→5% rather than flashing 0%→5%.
 
 ## Avatars
 
@@ -133,9 +146,9 @@ Vercel — `peak-esl1` team (PeakSuccess). Deploys auto-trigger on pushes to the
 - Don't hardcode area codes or language lists where dynamic discovery is easy. The StartScreen lists topics via `fetchAreas()`.
 - All API access goes through `src/lib/appApi.ts`. Don't sprinkle `fetch` elsewhere.
 - Keep components in plain React with `useState`; avoid pulling in a state library for this scope.
-- TTS: use `lib/speech.ts`; don't call `speechSynthesis` elsewhere. **Words and sentences are spoken in the user's avatar voice** via `speakAvatar(text, avatarId, { lang?, rate? })` → API `GET /api/vocab/tts?avatar=&lang=&text=` (a **multilingual** ElevenLabs proxy; key stays server-side), falling back to the Web Speech voice (in the same `lang`/`rate`) on any failure. ⚠️ **Always pass `lang`** (`en` for English, `es` for native): the API pre-generates clips keyed by `(voice, lang, text)`, so a missing/mismatched `lang` misses the cache and triggers a billable, slower regen — `speakAvatar` enforces this by always sending `lang` (defaulting to `en`). The ▶ listening-slowdown is **client-side** via `audio.playbackRate` + `preservesPitch` (`opts.rate` from `slowedRate`); server `speed` is always 1.0 so one cached clip serves every speed (it may return 200 bytes or a 302 to the CDN — the `Audio` element handles both; no CORS needed since we don't `fetch()` the bytes). Plain `speak(text, lang)` (Web Speech) now only powers **tile-tap word feedback** and the avatar-voice fallback. Volume: `DEFAULT_VOLUME = 0.36`; live value from `getVolume()` / `setVolume(v)`, driven by `VolumeSlider`, persisted under `peakvocabChallengesVolume` (applied to both Web Speech utterances and the avatar-voice `Audio` element). `speakWordByWord`/`gapMsFor` are now **unused legacy** (the sentence games moved to `speakAvatar`).
-- Sound effects (distinct from TTS): `src/lib/sound.ts` exposes `playCorrect()` and `playVictory()` (short clips at external URLs, volume tracks `getVolume()`). `playCorrect` fires **once per exercise, just before the celebration** (the confetti/balloons) at each challenge's success point — PickOne correct tile, the completing pair in MatchingTiles, the sentence-game wins, and "Remove this word"; **not** on Skip, and not on the final step (the victory trumpet covers it). `playVictory` plays on the `LessonComplete` screen. Both are gated on the audio toggle (`profile.audio`).
-- `Math.random` inline in component render is flagged by `react-hooks/purity`; hide it behind a module-level helper (as `MatchingTiles.coinFlip` / `Balloons.makeBalloons` / `lib/shuffle` do).
+- TTS: use `lib/speech.ts`; don't call `speechSynthesis` elsewhere. **Words and sentences are spoken in the user's avatar voice** via `speakAvatar(text, avatarId, { lang?, rate? })` → API `GET /api/vocab/tts?avatar=&lang=&text=` (a **multilingual** ElevenLabs proxy; key stays server-side), falling back to the Web Speech voice (in the same `lang`/`rate`) on any failure. ⚠️ **Always pass `lang`** (`en` for English, `es` for native): the API pre-generates clips keyed by `(voice, lang, text)`, so a missing/mismatched `lang` misses the cache and triggers a billable, slower regen — `speakAvatar` enforces this by always sending `lang` (defaulting to `en`). The ▶ listening-slowdown is **client-side** via `audio.playbackRate` + `preservesPitch` (`opts.rate` from `slowedRate`); server `speed` is always 1.0 so one cached clip serves every speed (it may return 200 bytes or a 302 to the CDN — the `Audio` element handles both; no CORS needed since we don't `fetch()` the bytes). Plain `speak(text, lang)` (Web Speech) now only powers **tile-tap word feedback** and the avatar-voice fallback. Volume: `DEFAULT_VOLUME = 0.36`; live value from `getVolume()` / `setVolume(v)`, driven by `VolumeSlider`, persisted under `peakvocabSurvivalVolume` (applied to both Web Speech utterances and the avatar-voice `Audio` element). `speakWordByWord`/`gapMsFor` are now **unused legacy** (the sentence games moved to `speakAvatar`).
+- Sound effects (distinct from TTS): `src/lib/sound.ts` exposes `playCorrect()` and `playVictory()` (short clips at external URLs, volume tracks `getVolume()`). `playCorrect` fires **once per exercise, just before the celebration** (the confetti) at each challenge's success point — the ClimbToSafety correct grab, PickOne correct tile, the completing pair in MatchingTiles, the sentence-game wins, and "Remove this word"; **not** on Skip, and not on the final step (the victory trumpet covers it). `playVictory` plays on the `LessonComplete` screen. Both are gated on the audio toggle (`profile.audio`).
+- `Math.random` inline in component render is flagged by `react-hooks/purity`; hide it behind a module-level helper (as `MatchingTiles.coinFlip` / `ClimbToSafety.makeHolds` / `lib/shuffle` do).
 - `Profile` (`src/types.ts`) carries `userId`, `difficulty` (→ API level), `areas[]` (`[]` = all), `language`, `avatarId`, `audio`. When `audio` is false, `buildLesson` drops audio challenges.
 
 ## Deferred / future

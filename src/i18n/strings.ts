@@ -66,7 +66,7 @@ export const STRINGS = {
   'chrome.loading': 'Loading…',
 
   // Challenge type labels
-  'challenge.balloons': 'Balloon Pop',
+  'challenge.climb': 'Climb to Safety',
   'challenge.match': 'Matching Tiles',
   'challenge.hearchoose': 'Hear and Choose',
   'challenge.translateA': 'Translate (native → English)',
@@ -77,11 +77,12 @@ export const STRINGS = {
   'challenge.pickHearToEn': 'Pick the Word (heard)',
   'challenge.pickImgToEn': 'Pick the Word (image)',
 
-  // Balloon Pop game
-  'balloon.instruction': 'Pop the balloon that matches!',
-  'balloon.correct': 'Correct',
-  'balloon.missed': 'Missed',
-  'balloon.round': 'Round {n}/{total}',
+  // Climb to Safety game
+  'climb.instruction': 'Grab the correct word to climb!',
+  'climb.ledge': 'Ledge {n}/{total}',
+  'climb.gameOver': 'Swept away!',
+  'climb.gameOverHint': 'The water caught you — try again.',
+  'climb.retry': 'Try again',
 
   // Challenge instructions
   'pick.clickEnglish': 'Click the correct English word',

@@ -4,7 +4,7 @@ import { avatarById } from '../data/avatars';
 import { AvatarBadge } from './AvatarBadge';
 import { speakAvatar, slowedRate } from '../lib/speech';
 import { pickN, shuffle } from '../lib/shuffle';
-import { Balloons } from './effects/Balloons';
+import { Bubbles } from './effects/Bubbles';
 import { playCorrect } from '../lib/sound';
 import { VolumeSlider } from './VolumeSlider';
 import { t } from '../i18n/i18n';
@@ -57,7 +57,7 @@ export function TranslateWhatYouHear({ version, sentence, distractors, language,
   const [chosen, setChosen] = useState<WordChip[]>([]);
   const [pressCount, setPressCount] = useState(0);
   const [shaking, setShaking] = useState(false);
-  const [showBalloons, setShowBalloons] = useState(false);
+  const [showBubbles, setShowBubbles] = useState(false);
   const [, setWrongCount] = useState(0);
   const [revealed, setRevealed] = useState(false);
 
@@ -96,7 +96,7 @@ export function TranslateWhatYouHear({ version, sentence, distractors, language,
     const ok = chosen.every((c, i) => c.word === targetTokens[i]);
     if (ok) {
       playCorrect();
-      setShowBalloons(true);
+      setShowBubbles(true);
       window.setTimeout(onComplete, 3000);
     } else {
       triggerShake();
@@ -157,7 +157,7 @@ export function TranslateWhatYouHear({ version, sentence, distractors, language,
         {t('common.submit')}
       </button>
 
-      {showBalloons && <Balloons onDone={() => setShowBalloons(false)} />}
+      {showBubbles && <Bubbles onDone={() => setShowBubbles(false)} />}
     </div>
   );
 }

@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AnswerMode, Difficulty, Phase, Profile, ProgressResponse } from './types';
 import { StartScreen } from './components/StartScreen';
 import { MatchingTiles } from './components/MatchingTiles';
 import { HearAndChoose } from './components/HearAndChoose';
 import { TranslateWhatYouHear } from './components/TranslateWhatYouHear';
 import { PickOne } from './components/PickOne';
-import { BalloonPop } from './components/BalloonPop';
+import { ClimbToSafety } from './components/ClimbToSafety';
 import { LessonComplete } from './components/LessonComplete';
 import { FeedbackModal, type FeedbackContext } from './components/FeedbackModal';
 import { fireConfetti } from './components/effects/Confetti';
@@ -37,6 +37,10 @@ function App() {
   // Guards the "Remove this word" button against a double-tap (per step).
   const [removedKey, setRemovedKey] = useState<string | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  // Once an auto-started (hub deep-link) session returns to the start screen
+  // (lesson finished or Quit), stop forcing the loading screen so the normal
+  // start screen shows instead of a stuck "Loading…".
+  const [autostartConsumed, setAutostartConsumed] = useState(false);
 
   function handleProgress(p: ProgressResponse) {
     setProgress(p);
@@ -45,6 +49,29 @@ function App() {
 
   const launchParams = useMemo(() => parseLaunchParams(window.location.search), []);
   const initialProfile: Partial<Profile> = { ...(savedProfile ?? {}), ...launchParams };
+
+  // The landing hub can deep-link straight into the game with its exact selections
+  // (?autostart=1 plus level/areas/audio), skipping the start screen — but only
+  // when we already have the identity PLP must supply (userId/language/avatar).
+  const canAutostart =
+    !!launchParams.autostart &&
+    !!launchParams.userId && launchParams.userId > 0 &&
+    !!launchParams.language && !!launchParams.avatarId;
+
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (autoStarted.current || !canAutostart) return;
+    autoStarted.current = true;
+    startWith({
+      userId: launchParams.userId!,
+      difficulty: launchParams.difficulty ?? 'easy',
+      areas: launchParams.areas ?? [],
+      language: launchParams.language!,
+      avatarId: launchParams.avatarId!,
+      audio: launchParams.audio ?? true,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function startWith(p: Profile) {
     try {
@@ -117,6 +144,7 @@ function App() {
   function onCelebrationDone() {
     setProfile(null);
     setLesson(null);
+    setAutostartConsumed(true);
     setPhase({ kind: 'start' });
   }
 
@@ -127,10 +155,17 @@ function App() {
     setProfile(null);
     setLesson(null);
     setLevelUp(null);
+    setAutostartConsumed(true);
     setPhase({ kind: 'start' });
   }
 
   if (phase.kind === 'start') {
+    // While an auto-start (hub deep link) is in flight, show loading instead of
+    // flashing the landing screen. A failed lesson build sets `error` and falls
+    // through to the start screen (with the error banner).
+    if (canAutostart && !error && !autostartConsumed) {
+      return <div className="screen"><p>{t('chrome.loading')}</p></div>;
+    }
     const resumeMerged: Profile | null = savedProfile ? { ...savedProfile, ...launchParams } : null;
     return (
       <>
@@ -186,7 +221,7 @@ function App() {
     <>
       <div className="topbar">
         <div className="topbar-left">
-          {/* A balloon lesson is one self-paced step (it shows its own round
+          {/* A climb lesson is one self-paced step (it shows its own ledge
               counter), so the "X of N" step count only applies to legacy steps. */}
           {lesson.steps.length > 1 && (
             <span className="step-count">
@@ -201,14 +236,15 @@ function App() {
         </div>
       </div>
 
-      {step.kind === 'balloons' && (
-        <BalloonPop
+      {step.kind === 'climb' && (
+        <ClimbToSafety
           key={stepKey}
           rounds={step.rounds}
           pool={lesson.bin}
           language={profile.language}
           avatarId={profile.avatarId}
           audio={profile.audio}
+          paused={feedbackOpen}
           onAnswer={handleAnswer}
           onComplete={onChallengeComplete}
         />
@@ -262,9 +298,9 @@ function App() {
         />
       )}
 
-      {/* The balloon game paces itself (15 rounds, auto-advancing), so it has no
+      {/* The climb game paces itself (15 rounds, rising water), so it has no
           per-step Skip/Remove controls — only the topbar Quit. */}
-      {step.kind !== 'balloons' && (
+      {step.kind !== 'climb' && (
         <div className="skip-bar">
           <button type="button" className="skip-btn" onClick={onChallengeComplete}>
             {t('chrome.skip')}
@@ -298,7 +334,7 @@ function App() {
 function feedbackContextFor(step: LessonStep): FeedbackContext {
   const challengeType = labelForStep(step);
   switch (step.kind) {
-    case 'balloons':
+    case 'climb':
       return { challengeType, challengeKind: step.kind, word: step.rounds.map((r) => r.target.english).join(', ') };
     case 'pick':
       return {
@@ -320,8 +356,8 @@ function feedbackContextFor(step: LessonStep): FeedbackContext {
 
 function labelForStep(step: LessonStep): string {
   switch (step.kind) {
-    case 'balloons':
-      return t('challenge.balloons');
+    case 'climb':
+      return t('challenge.climb');
     case 'match':
       return t('challenge.match');
     case 'hearchoose':
