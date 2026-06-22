@@ -1,0 +1,6 @@
+{
+  "waterRisePerSec": 0.9,
+  "climbStep": 4.3,
+  "wrongSurge": 3,
+  "parTimeMs": 75000
+}

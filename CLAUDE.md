@@ -38,6 +38,12 @@ The whole lesson is a **single self-paced `climb` step** of `LESSON_LENGTH = 15`
 
 `App` clocks each game (`lessonStartRef`) and counts wrong answers (`wrongCountRef`); on the final round it computes the total time + whether the run was **flawless** (no wrong answers) and POSTs them via `submitTime` (`appApi.ts`, `app: 'survival'`). The `LessonComplete` "Great job!" screen shows the **time** and, for flawless runs, its **rank among all flawless runs** for this app (`#rank of N`, or "🏆 New best" at rank 1); non-flawless runs show a "finish with no mistakes" nudge, and the PICS ONLY review is skipped. ⚠️ The **`POST /api/app/times`** endpoint + `lesson_times` table live in **peakvocab-api** (not this repo); until they exist `submitTime` fails gracefully — the time still shows, just no rank.
 
+During play, a **countdown dial** (`CountdownDial`, top-right of the climb scene) winds down toward the **current best flawless time** — `fetchBestTime` → **`GET /api/app/times/best?app=survival`** (also peakvocab-api). Until that endpoint exists it races the **`parTimeMs`** from the runtime config instead (the dial's `label` shows `best` vs `par`); past the target it turns red and counts up the overage.
+
+### Runtime tuning (config.json)
+
+Difficulty knobs — `waterRisePerSec`, `climbStep`, `wrongSurge`, and the dial's `parTimeMs` — are read at runtime from a JSON config (`loadGameConfig` in `src/lib/gameConfig.ts`), **not** compiled in, so they change **without a rebuild**. The default source is the bundled `public/config.json` (served at `/config.json`); set `VITE_CONFIG_URL` to fetch from an external URL instead (live, no-redeploy tuning — that host must allow CORS). `App` re-fetches on every **Start** (cache-busted), so editing the config and starting a new lesson applies the new values with no page reload; missing/invalid fields fall back to the defaults in `gameConfig.ts`. `ClimbToSafety` reads the water rise through a ref synced from the `config` prop, so it can even change mid-run.
+
 ### Challenge modes (all word-based)
 
 Words come from the bin as `ApiWord` (`{senseId, english, definition, translations?: {<lang>: [{word, definition}]}, pictureUrl, status, streak, …}`; `translations` is an **ordered array**, index 0 is primary; only `es` is loaded today; `pictureUrl` is a relative path or null — resolve with `appApi.imageUrl(word)`, coverage fills in as images generate).

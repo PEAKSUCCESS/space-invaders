@@ -185,6 +185,16 @@ export function submitTime(input: SubmitTimeInput): Promise<TimeResult> {
   return postJson<TimeResult>('/api/app/times', input);
 }
 
+export interface BestTime {
+  bestMs: number | null;  // fastest flawless time for the app (null if none yet)
+  count: number;          // how many flawless runs exist
+}
+
+/** Current best flawless time for an app — feeds the in-game countdown dial (no auth). */
+export function fetchBestTime(app: string): Promise<BestTime> {
+  return getJson<BestTime>(`/api/app/times/best?app=${encodeURIComponent(app)}`);
+}
+
 // This app's name, sent to scope UI strings to the Challenges app (the API's
 // ui_strings table is shared across apps).
 const APP_NAME = 'Challenges';

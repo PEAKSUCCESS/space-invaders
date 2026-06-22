@@ -11,7 +11,8 @@ import { FeedbackModal, type FeedbackContext } from './components/FeedbackModal'
 import { fireConfetti } from './components/effects/Confetti';
 import { playCorrect } from './lib/sound';
 import { buildLesson, type Lesson, type LessonStep } from './game/lesson';
-import { completeWord, imageUrl, submitAnswer, submitFeedback, submitTime, type TimeResult } from './lib/appApi';
+import { completeWord, fetchBestTime, imageUrl, submitAnswer, submitFeedback, submitTime, type TimeResult } from './lib/appApi';
+import { DEFAULT_CONFIG, loadGameConfig, type GameConfig } from './lib/gameConfig';
 import { loadProgress, loadSave, writeProgress, writeSave, type SaveState } from './game/save';
 import { parseLaunchParams } from './lib/launchParams';
 import { t } from './i18n/i18n';
@@ -49,6 +50,11 @@ function App() {
   // (lesson finished or Quit), stop forcing the loading screen so the normal
   // start screen shows instead of a stuck "Loading…".
   const [autostartConsumed, setAutostartConsumed] = useState(false);
+  // Runtime tuning (water speed, par time) fetched from /config.json on each Start,
+  // plus the countdown-dial target (the leaderboard best, else the config par time).
+  const [gameConfig, setGameConfig] = useState<GameConfig>(DEFAULT_CONFIG);
+  const [raceTargetMs, setRaceTargetMs] = useState<number>(DEFAULT_CONFIG.parTimeMs);
+  const [raceLabel, setRaceLabel] = useState<'best' | 'par'>('par');
 
   function handleProgress(p: ProgressResponse) {
     setProgress(p);
@@ -85,6 +91,8 @@ function App() {
     try {
       setError(null);
       setLevelUp(null);
+      const cfg = await loadGameConfig(); // runtime tuning; no rebuild needed to change it
+      setGameConfig(cfg);
       const l = await buildLesson(p, lessonsCompleted);
       setLesson(l);
       setProfile(p);
@@ -96,6 +104,15 @@ function App() {
       setFlawless(false);
       setTimeResult(null);
       setRankPending(false);
+      // Countdown-dial target: the current best flawless time if there is one, else
+      // the config par time. Fire-and-forget so a missing/slow endpoint never blocks.
+      setRaceTargetMs(cfg.parTimeMs);
+      setRaceLabel('par');
+      if (!p.picsOnly) {
+        fetchBestTime('survival')
+          .then((b) => { if (b.bestMs && b.bestMs > 0) { setRaceTargetMs(b.bestMs); setRaceLabel('best'); } })
+          .catch(() => { /* no leaderboard yet → race the par time */ });
+      }
       setPhase({ kind: 'challenge', index: 0 });
     } catch (e) {
       setError((e as Error).message);
@@ -299,6 +316,10 @@ function App() {
           avatarId={profile.avatarId}
           audio={profile.audio}
           paused={feedbackOpen}
+          config={gameConfig}
+          startTime={lessonStartRef.current ?? undefined}
+          targetMs={raceTargetMs}
+          targetLabel={raceLabel}
           onAnswer={handleAnswer}
           onComplete={onChallengeComplete}
         />

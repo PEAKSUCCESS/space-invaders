@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AnswerMode, ApiWord, AvatarId, LanguageCode } from '../types';
 import type { ChoiceKind, ClimbRound } from '../game/lesson';
+import type { GameConfig } from '../lib/gameConfig';
 import { imageUrl } from '../lib/appApi';
 import { pickN, shuffle } from '../lib/shuffle';
 import { speakAvatar } from '../lib/speech';
 import { fireConfetti } from './effects/Confetti';
 import { playCorrect } from '../lib/sound';
+import { CountdownDial } from './CountdownDial';
 import { t } from '../i18n/i18n';
 
 interface Props {
@@ -15,6 +17,10 @@ interface Props {
   avatarId: AvatarId;
   audio?: boolean;
   paused?: boolean;                // freeze the rising water (e.g. feedback modal open)
+  config?: GameConfig;             // runtime difficulty tuning (water rise, etc.)
+  startTime?: number;              // game start timestamp (for the countdown dial)
+  targetMs?: number;               // dial target — the leaderboard best or the par time
+  targetLabel?: string;            // 'best' | 'par'
   onAnswer: (senseId: string, correct: boolean, mode: AnswerMode) => void;
   onComplete: () => void;
 }
@@ -29,7 +35,7 @@ const ADVANCE_DELAY_MS = 750;    // celebrate the climb before the next round
 const CLIMBER_START = 8;
 const CLIMB_STEP = 4.3;          // ~15 climbs → near CLIMBER_MAX
 const CLIMBER_MAX = 70;          // clamp so the sprite never clips the top
-const WATER_RISE_PER_SEC = 0.75;
+const WATER_RISE_PER_SEC = 0.9; // 20% faster than the original 0.75
 const WRONG_SURGE = 3;
 // The climber is "covered" (game over) only when the water reaches the top of the
 // head — ~78px above the sprite's bottom anchor (≈0.82 × the 95px climber height in
@@ -166,7 +172,7 @@ function buildChoices(target: ApiWord, choiceKind: ChoiceKind, pool: ApiWord[], 
   return shuffle([correct, ...pickN(distractors, CHOICE_COUNT - 1)]);
 }
 
-export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, paused = false, onAnswer, onComplete }: Props) {
+export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, paused = false, config, startTime, targetMs, targetLabel, onAnswer, onComplete }: Props) {
   const total = rounds.length;
   const [roundIndex, setRoundIndex] = useState(0);
   const [gameOver, setGameOver] = useState(false);
@@ -190,8 +196,10 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
   const waterRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
   const sceneHRef = useRef(0); // cached scene pixel height (for the head-coverage test)
+  const riseRef = useRef(config?.waterRisePerSec ?? WATER_RISE_PER_SEC); // live water speed
 
   useEffect(() => { pausedRef.current = paused; }, [paused]);
+  useEffect(() => { riseRef.current = config?.waterRisePerSec ?? WATER_RISE_PER_SEC; }, [config]);
 
   // Cache the scene's pixel height so the head-coverage test stays accurate across
   // screen sizes without reading layout every frame.
@@ -231,7 +239,7 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
       if (last == null) return;
       const dt = Math.min(0.05, (ts - last) / 1000); // clamp big tab-switch gaps
       const live = !pausedRef.current && !advancingRef.current && !gameOverRef.current && !doneRef.current;
-      if (live) waterPosRef.current = clamp(waterPosRef.current + dt * WATER_RISE_PER_SEC, 0, 100);
+      if (live) waterPosRef.current = clamp(waterPosRef.current + dt * riseRef.current, 0, 100);
       if (waterRef.current) waterRef.current.style.height = `${waterPosRef.current}%`;
       // Game over only when the water rises above the climber's head (covered).
       const headPct = climberPosRef.current + (CLIMBER_HEAD_PX / (sceneHRef.current || 320)) * 100;
@@ -265,7 +273,7 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
     if (choice.correct) {
       resolvedRef.current = true;
       advancingRef.current = true; // brief breather while the climber rises + we advance
-      const next = clamp(climberPosRef.current + CLIMB_STEP, CLIMBER_START, CLIMBER_MAX);
+      const next = clamp(climberPosRef.current + (config?.climbStep ?? CLIMB_STEP), CLIMBER_START, CLIMBER_MAX);
       climberPosRef.current = next;
       setClimberPos(next);
       setChosen((c) => ({ ...c, [choiceKey(choice.id)]: 'correct' }));
@@ -278,7 +286,7 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
     } else {
       // Wrong: the water surges up (it never recedes); the round stays open until
       // the correct choice is picked.
-      waterPosRef.current = clamp(waterPosRef.current + WRONG_SURGE, 0, 100);
+      waterPosRef.current = clamp(waterPosRef.current + (config?.wrongSurge ?? WRONG_SURGE), 0, 100);
       setChosen((c) => ({ ...c, [choiceKey(choice.id)]: 'wrong' }));
     }
   }
@@ -339,6 +347,10 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
       {/* The climb scene: ladder, hiker ascending, ever-rising water. */}
       <div className="climb-scene" ref={sceneRef}>
         <div className="climb-ladder" aria-hidden="true" />
+
+        {typeof startTime === 'number' && typeof targetMs === 'number' && targetMs > 0 && (
+          <CountdownDial startTime={startTime} targetMs={targetMs} label={targetLabel} />
+        )}
 
         <div className="climb-climber" style={{ bottom: `${climberPos}%` }}>
           <HikerClimber />
