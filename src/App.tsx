@@ -11,7 +11,7 @@ import { FeedbackModal, type FeedbackContext } from './components/FeedbackModal'
 import { fireConfetti } from './components/effects/Confetti';
 import { playCorrect } from './lib/sound';
 import { buildLesson, type Lesson, type LessonStep } from './game/lesson';
-import { completeWord, imageUrl, submitAnswer, submitFeedback } from './lib/appApi';
+import { completeWord, imageUrl, submitAnswer, submitFeedback, submitTime, type TimeResult } from './lib/appApi';
 import { loadProgress, loadSave, writeProgress, writeSave, type SaveState } from './game/save';
 import { parseLaunchParams } from './lib/launchParams';
 import { t } from './i18n/i18n';
@@ -37,6 +37,14 @@ function App() {
   // Guards the "Remove this word" button against a double-tap (per step).
   const [removedKey, setRemovedKey] = useState<string | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  // Game timer + flawless tracking, surfaced on the completion screen and sent to
+  // the leaderboard. Refs (not state) so counting an answer never re-renders.
+  const lessonStartRef = useRef<number | null>(null);
+  const wrongCountRef = useRef(0);
+  const [lessonTimeMs, setLessonTimeMs] = useState<number | null>(null);
+  const [flawless, setFlawless] = useState(false);
+  const [timeResult, setTimeResult] = useState<TimeResult | null>(null);
+  const [rankPending, setRankPending] = useState(false);
   // Once an auto-started (hub deep-link) session returns to the start screen
   // (lesson finished or Quit), stop forcing the loading screen so the normal
   // start screen shows instead of a stuck "Loading…".
@@ -81,6 +89,13 @@ function App() {
       setLesson(l);
       setProfile(p);
       writeSave({ ...p, lessonsCompleted, lastUpdated: Date.now() });
+      // Start the game clock + reset per-game tracking and the last result.
+      lessonStartRef.current = Date.now();
+      wrongCountRef.current = 0;
+      setLessonTimeMs(null);
+      setFlawless(false);
+      setTimeResult(null);
+      setRankPending(false);
       setPhase({ kind: 'challenge', index: 0 });
     } catch (e) {
       setError((e as Error).message);
@@ -89,6 +104,7 @@ function App() {
 
   async function handleAnswer(senseId: string, correct: boolean, mode: AnswerMode) {
     if (!profile) return;
+    if (!correct) wrongCountRef.current += 1; // a miss or wrong answer breaks the flawless run
     try {
       const res = await submitAnswer(profile.userId, { senseId, correct, mode });
       if (res.levelAdvancedTo) {
@@ -135,6 +151,21 @@ function App() {
       const n = lessonsCompleted + 1;
       setLessonsCompleted(n);
       if (profile) writeSave({ ...profile, lessonsCompleted: n, lastUpdated: Date.now() });
+      // Total time to complete the game + whether it was flawless (no wrong answers).
+      const durationMs = lessonStartRef.current ? Date.now() - lessonStartRef.current : 0;
+      const isFlawless = wrongCountRef.current === 0;
+      const rounds = lesson.steps.reduce((sum, s) => sum + (s.kind === 'climb' ? s.rounds.length : 1), 0);
+      setLessonTimeMs(durationMs);
+      setFlawless(isFlawless);
+      setTimeResult(null);
+      // Record to the global leaderboard (skip the stage-only PICS ONLY review).
+      if (profile && !profile.picsOnly) {
+        setRankPending(true);
+        submitTime({ userId: profile.userId, app: 'survival', durationMs, wrongCount: wrongCountRef.current, rounds, level: profile.difficulty })
+          .then((r) => setTimeResult(r))
+          .catch((e) => console.warn('submitTime failed', e))
+          .finally(() => setRankPending(false));
+      }
       setPhase({ kind: 'celebrate' });
       return;
     }
@@ -189,7 +220,18 @@ function App() {
   }
 
   if (phase.kind === 'celebrate') {
-    return <LessonComplete onDone={onCelebrationDone} levelUp={levelUp} audio={profile?.audio ?? true} />;
+    return (
+      <LessonComplete
+        onDone={onCelebrationDone}
+        levelUp={levelUp}
+        audio={profile?.audio ?? true}
+        timeMs={lessonTimeMs}
+        flawless={flawless}
+        ranking={rankPending}
+        rank={timeResult?.rank ?? null}
+        totalFlawless={timeResult?.totalFlawless ?? null}
+      />
+    );
   }
 
   if (!profile || !lesson) return <div className="screen"><p>{t('chrome.loading')}</p></div>;

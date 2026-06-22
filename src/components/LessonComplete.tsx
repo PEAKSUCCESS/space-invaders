@@ -8,9 +8,24 @@ interface Props {
   onDone: () => void;
   levelUp?: Difficulty | null;
   audio?: boolean;
+  timeMs?: number | null;          // total time to complete the game
+  flawless?: boolean;              // run had no wrong answers
+  ranking?: boolean;               // waiting on the server rank
+  rank?: number | null;            // 1-based rank among flawless runs
+  totalFlawless?: number | null;   // how many flawless runs exist
 }
 
-export function LessonComplete({ onDone, levelUp, audio = true }: Props) {
+// mm:ss (e.g. 1:24, 0:47).
+function formatTime(ms: number): string {
+  const total = Math.round(ms / 1000);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+export function LessonComplete({
+  onDone, levelUp, audio = true, timeMs, flawless, ranking, rank, totalFlawless,
+}: Props) {
   useEffect(() => {
     if (audio) playVictory();
   }, [audio]);
@@ -22,6 +37,23 @@ export function LessonComplete({ onDone, levelUp, audio = true }: Props) {
       {levelUp && (
         <div className="lesson-complete-levelup">{t('complete.levelUp', { level: t(`level.${levelUp}`) })}</div>
       )}
+      {typeof timeMs === 'number' && (
+        <div className="lesson-complete-time">{t('complete.time', { time: formatTime(timeMs) })}</div>
+      )}
+      {typeof timeMs === 'number' &&
+        (flawless ? (
+          ranking ? (
+            <div className="lesson-complete-rank muted">{t('complete.ranking')}</div>
+          ) : rank != null ? (
+            <div className="lesson-complete-rank">
+              {rank === 1
+                ? t('complete.bestTime')
+                : t('complete.rank', { rank, total: totalFlawless ?? rank })}
+            </div>
+          ) : null
+        ) : (
+          <div className="lesson-complete-rank muted">{t('complete.notRanked')}</div>
+        ))}
     </div>
   );
 }

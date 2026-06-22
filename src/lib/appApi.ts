@@ -160,6 +160,31 @@ export function submitFeedback(input: FeedbackInput): Promise<{ ok: boolean; id?
   return postJson('/api/app/feedback', input);
 }
 
+// ── Leaderboard times ────────────────────────────────────────────────────────
+// A completed game's total time, recorded server-side in a `lesson_times` table.
+// Only flawless runs (wrongCount === 0) are ranked; the response carries this
+// run's rank among all flawless runs for the same `app`.
+export interface SubmitTimeInput {
+  userId: number;       // required — attributes the run
+  app: string;          // which game: 'balloons' | 'survival' | …
+  durationMs: number;   // total time to finish the game
+  wrongCount: number;   // wrong/missed answers this run (0 = flawless)
+  rounds: number;       // how many rounds the game had (e.g. 15)
+  level: string;        // difficulty, for context / future filtering
+}
+
+export interface TimeResult {
+  durationMs: number;
+  flawless: boolean;      // wrongCount === 0
+  rank: number | null;    // 1-based rank among flawless runs (null when not flawless)
+  totalFlawless: number;  // how many flawless runs exist for this app (incl. this one)
+}
+
+/** Record a completed game's time and get its rank among flawless runs (auth). */
+export function submitTime(input: SubmitTimeInput): Promise<TimeResult> {
+  return postJson<TimeResult>('/api/app/times', input);
+}
+
 // This app's name, sent to scope UI strings to the Challenges app (the API's
 // ui_strings table is shared across apps).
 const APP_NAME = 'Challenges';

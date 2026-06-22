@@ -78,7 +78,7 @@ export const STRINGS = {
   'challenge.pickImgToEn': 'Pick the Word (image)',
 
   // Climb to Safety game
-  'climb.instruction': 'Grab the correct word to climb!',
+  'climb.instruction': 'Pick the match to climb above the water!',
   'climb.ledge': 'Ledge {n}/{total}',
   'climb.gameOver': 'Swept away!',
   'climb.gameOverHint': 'The water caught you — try again.',
@@ -92,6 +92,11 @@ export const STRINGS = {
   // Lesson complete
   'complete.greatJob': 'Great job!',
   'complete.levelUp': 'You reached {level}! 🎉',
+  'complete.time': 'Time: {time}',
+  'complete.ranking': 'Ranking your time…',
+  'complete.rank': 'Time rank: #{rank} of {total} flawless runs',
+  'complete.bestTime': '🏆 New best flawless time!',
+  'complete.notRanked': 'Finish with no mistakes to make the leaderboard.',
 
   // Feedback modal
   'feedback.thanks': 'Thanks for your feedback! 🙌',

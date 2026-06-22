@@ -543,67 +543,64 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
 }
 .climb-hud {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 10px 16px 4px; z-index: 6;
+  padding: 8px 16px 2px; z-index: 6;
 }
-.climb-ledge { color: var(--text); font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.climb-instruction { margin: 0; color: var(--muted); font-size: 15px; font-weight: 600; }
+.climb-ledge { color: var(--text); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.climb-instruction { margin: 0; color: var(--muted); font-size: 14px; font-weight: 600; }
 
-/* The prompt the learner is matching, kept above the waterline. */
-.climb-prompt {
-  display: flex; flex-direction: column; align-items: center;
-  padding: 4px 16px 10px; z-index: 6;
-}
-.climb-prompt-card {
+/* The clue, at the very top. */
+.climb-clue { display: flex; justify-content: center; padding: 2px 16px 6px; z-index: 6; }
+.climb-clue-card {
   display: flex; align-items: center; justify-content: center;
-  min-height: 78px; padding: 10px 32px;
+  min-height: 60px; padding: 8px 28px;
   background: var(--panel); border-radius: 16px; box-shadow: var(--shadow);
 }
-.climb-prompt-card.image { padding: 8px; }
-.climb-prompt-word { font-size: 40px; font-weight: 700; letter-spacing: -1px; color: var(--text); }
-.climb-prompt-img { width: 130px; height: 130px; object-fit: contain; display: block; }
+.climb-clue-card.image { padding: 6px; }
+.climb-clue-word { font-size: 34px; font-weight: 700; letter-spacing: -1px; color: var(--text); }
+.climb-clue-img { width: 104px; height: 104px; object-fit: contain; display: block; }
 
-/* The cliff: handholds up top, climber clinging mid-face, water rising from the
-   bottom. overflow:hidden clips the water; touch-action/user-select keep taps
-   from being eaten by scroll/zoom or text-selection gestures. */
-.climb-field {
-  position: relative; flex: 1; overflow: hidden;
-  margin: 0 8px; border-radius: 18px 18px 0 0;
-  background: linear-gradient(180deg, #f6e7c4 0%, #ecd29c 48%, #dcbd80 100%); /* sunlit rock */
-  box-shadow: inset 0 10px 22px rgba(0, 0, 0, 0.06);
-  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+/* The choices — a tile band below the clue and above the ladder. */
+.climb-choices {
+  display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start;
+  gap: 9px 10px; padding: 4px 12px 8px; z-index: 6;
+  width: 100%; max-width: 640px; margin: 0 auto; box-sizing: border-box;
 }
-
-/* Word handholds — knobby tiles up the rock face, above the danger line. */
-.climb-holds {
-  position: absolute; left: 0; right: 0; top: 5%; bottom: 48%;
-  display: flex; flex-wrap: wrap; align-content: center; align-items: center;
-  justify-content: center; gap: 12px 14px; padding: 0 14px; z-index: 4;
-}
-.climb-hold {
+.climb-choice {
   border: none; cursor: pointer; font-family: inherit;
-  min-width: 92px; max-width: 150px; padding: 14px 18px;
-  border-radius: 14px;
+  min-width: 74px; max-width: 150px; padding: 11px 14px; border-radius: 13px;
   background: var(--tile-bg); color: var(--text);
-  font-weight: 700; font-size: 17px; line-height: 1.15; text-align: center; word-break: break-word;
+  font-weight: 700; font-size: 16px; line-height: 1.15; text-align: center; word-break: break-word;
   box-shadow: inset -4px -5px 0 rgba(0, 0, 0, 0.14), var(--shadow);
   transition: transform 0.12s, filter 0.12s;
 }
-.climb-hold:hover:not(:disabled) { filter: brightness(1.05); transform: translateY(-2px); }
-.climb-hold:disabled { cursor: default; }
-.climb-hold.correct { background: var(--tile-reveal); color: #fff; animation: climb-grab 0.3s ease-out; }
-.climb-hold.wrong { background: var(--tile-wrong); color: #fff; animation: climb-crumble 0.45s ease-out forwards; }
+.climb-choice.image { width: 84px; height: 84px; padding: 6px; }
+.climb-choice.image img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.climb-choice:hover:not(:disabled) { filter: brightness(1.05); transform: translateY(-2px); }
+.climb-choice:disabled { cursor: default; }
+.climb-choice.correct { background: var(--tile-reveal); color: #fff; animation: climb-grab 0.3s ease-out; }
+.climb-choice.wrong { background: var(--tile-wrong); color: #fff; animation: climb-crumble 0.45s ease-out forwards; }
 @keyframes climb-grab {
   0% { transform: scale(1); } 45% { transform: scale(1.12); } 100% { transform: scale(1); }
 }
 @keyframes climb-crumble {
   0% { transform: translateY(0) rotate(0); opacity: 1; }
-  100% { transform: translateY(16px) rotate(4deg); opacity: 0.35; }
+  100% { transform: translateY(10px) rotate(3deg); opacity: 0.4; }
 }
 
-/* The ladder the climber ascends. z below the water so its lower rungs read as
-   submerged; the rungs are the element background, the rails are pseudo-elements. */
+/* The climb scene: ladder, hiker, ever-rising water. overflow:hidden clips the
+   water; touch-action/user-select keep taps from being eaten by gestures. */
+.climb-scene {
+  position: relative; flex: 1; overflow: hidden;
+  margin: 0 8px; border-radius: 18px 18px 0 0;
+  background: linear-gradient(180deg, #d3e8f4 0%, #aacfe2 55%, #8fbcd6 100%); /* open shaft */
+  box-shadow: inset 0 10px 22px rgba(0, 0, 0, 0.06);
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+
+/* The ladder the hiker climbs; z below the water so its lower rungs read as
+   submerged. Rungs are the element background; the rails are pseudo-elements. */
 .climb-ladder {
-  position: absolute; left: 50%; top: 0; bottom: 0; width: 80px;
+  position: absolute; left: 50%; top: 0; bottom: 0; width: 76px;
   transform: translateX(-50%); z-index: 2; pointer-events: none;
   background: repeating-linear-gradient(to bottom, transparent 0 26px, #b9772f 26px 34px);
 }
@@ -612,64 +609,35 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
   background: linear-gradient(90deg, #c98a3c, #a5651f);
   border-radius: 6px; box-shadow: inset -2px 0 0 rgba(0, 0, 0, 0.18);
 }
-.climb-ladder::before { left: 7px; }
-.climb-ladder::after { right: 7px; }
+.climb-ladder::before { left: 6px; }
+.climb-ladder::after { right: 6px; }
 
-/* The avatar, mid-climb on the ladder, just above the waterline. */
+/* The hiker (mimics public/hiker.png), rising a rung per correct answer; the
+   `bottom` is set inline and a transition animates each climb. */
 .climb-climber {
-  position: absolute; left: 50%; bottom: 30%;
-  width: 100px; height: 116px; transform: translateX(-50%);
-  z-index: 5; pointer-events: none;
-  filter: drop-shadow(0 5px 7px rgba(0, 0, 0, 0.28));
+  position: absolute; left: 50%; transform: translateX(-50%);
+  width: 70px; height: 86px; z-index: 5; pointer-events: none;
+  transition: bottom 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.3));
 }
-/* Round portrait "head" (the start-page avatar), framed like a badge. */
-.cl-avatar {
-  position: absolute; left: 50%; top: 16px; transform: translateX(-50%);
-  width: 62px; height: 62px; border-radius: 50%; overflow: hidden;
-  border: 3px solid #fff; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25); background: #cfe5f0;
-}
-.cl-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.cl-emoji { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 40px; }
-
-/* Arms reach up to grip a rung; legs plant on a rung below. The hand/boot are
-   pseudo-elements, and each limb shuffles in opposite phase for a climbing gait. */
-.cl-arm, .cl-leg { position: absolute; border-radius: 7px; }
-.cl-arm { top: 10px; width: 11px; height: 38px; background: #e7b58c; }
-.cl-arm::after { content: ''; position: absolute; top: -7px; left: -2px; width: 15px; height: 15px; border-radius: 50%; background: #d99b6c; }
-.cl-arm-l { left: 18px; transform-origin: bottom center; animation: cl-arm-l 1.15s ease-in-out infinite; }
-.cl-arm-r { right: 18px; transform-origin: bottom center; animation: cl-arm-r 1.15s ease-in-out infinite; }
-.cl-leg { bottom: 2px; width: 12px; height: 40px; background: #5b6b8a; }
-.cl-leg::after { content: ''; position: absolute; bottom: -4px; left: -3px; width: 18px; height: 10px; border-radius: 4px 5px 5px 4px; background: #3a2f1a; }
-.cl-leg-l { left: 26px; transform-origin: top center; animation: cl-leg-l 1.15s ease-in-out infinite; }
-.cl-leg-r { right: 26px; transform-origin: top center; animation: cl-leg-r 1.15s ease-in-out infinite; }
-@keyframes cl-arm-l { 0%, 100% { transform: rotate(16deg) translateY(0); } 50% { transform: rotate(6deg) translateY(-7px); } }
-@keyframes cl-arm-r { 0%, 100% { transform: rotate(-6deg) translateY(-7px); } 50% { transform: rotate(-16deg) translateY(0); } }
-@keyframes cl-leg-l { 0%, 100% { transform: rotate(-12deg) translateY(0); } 50% { transform: rotate(-3deg) translateY(6px); } }
-@keyframes cl-leg-r { 0%, 100% { transform: rotate(3deg) translateY(6px); } 50% { transform: rotate(12deg) translateY(0); } }
-
-/* A stronger upward scramble each time the climber answers correctly. */
-.climb-climber.hop { animation: climb-hop 0.5s ease-out; }
-@keyframes climb-hop {
-  0% { transform: translateX(-50%) translateY(0); }
-  40% { transform: translateX(-50%) translateY(-18px); }
-  100% { transform: translateX(-50%) translateY(0); }
+.climb-climber svg { width: 100%; height: 100%; display: block; animation: hiker-bob 1.5s ease-in-out infinite; }
+@keyframes hiker-bob {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+  50% { transform: translateY(-3px) rotate(1.5deg); }
 }
 
-/* Rising water. Its height % is driven imperatively by the game loop. */
+/* The water — only ever rises. Height % is driven imperatively by the game loop. */
 .climb-water {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 7%;
-  background: linear-gradient(180deg, rgba(74, 172, 222, 0.78) 0%, rgba(28, 108, 178, 0.94) 100%);
-  border-top: 3px solid rgba(255, 255, 255, 0.55);
+  position: absolute; left: 0; right: 0; bottom: 0; height: 0;
+  background: linear-gradient(180deg, rgba(74, 172, 222, 0.82) 0%, rgba(28, 108, 178, 0.95) 100%);
   box-shadow: 0 -4px 16px rgba(28, 108, 178, 0.4);
   z-index: 3;
 }
-.climb-water::before {
-  content: ''; position: absolute; top: -7px; left: 0; right: 0; height: 12px;
-  background: repeating-linear-gradient(90deg,
-    rgba(255, 255, 255, 0) 0 14px, rgba(255, 255, 255, 0.4) 14px 22px);
-  animation: climb-wave 1.6s linear infinite;
-}
-@keyframes climb-wave { from { transform: translateX(0); } to { transform: translateX(22px); } }
+/* Two animated wave crests riding the surface (200% wide → seamless loop). */
+.climb-wave { position: absolute; bottom: 100%; left: 0; width: 200%; height: 16px; display: block; }
+.climb-wave.back { fill: rgba(120, 196, 230, 0.6); height: 19px; animation: climb-wave 4.5s linear infinite; }
+.climb-wave.front { fill: rgba(74, 172, 222, 0.9); animation: climb-wave 3s linear infinite; }
+@keyframes climb-wave { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
 /* Game-over: the water swallowed the climber. */
 .climb-over {
@@ -717,6 +685,17 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
   text-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 0 40px rgba(236, 119, 0, 0.6);
   animation: pop-in 0.4s ease-out both;
 }
+.lesson-complete-time {
+  font-size: 30px; font-weight: 700; color: #fff;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  animation: pop-in 0.5s ease-out both;
+}
+.lesson-complete-rank {
+  font-size: 20px; font-weight: 600; color: #ffd07a;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  animation: pop-in 0.55s ease-out both;
+}
+.lesson-complete-rank.muted { color: rgba(255, 255, 255, 0.7); font-weight: 500; }
 @keyframes pop-in {
   0% { transform: scale(0.6); opacity: 0; }
   60% { transform: scale(1.1); opacity: 1; }

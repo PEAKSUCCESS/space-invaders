@@ -6,14 +6,26 @@ import { PICS_ONLY_ENABLED } from '../lib/env';
 
 export const LESSON_LENGTH = 15;
 
-// Climb round: the prompt shown above the cliff is either the word's native
-// translation ('word') or its picture ('image'); the handholds always carry
-// English words, one of which matches the prompt.
-export type ClimbPromptKind = 'word' | 'image';
+// One climb round pairs a clue with the kind of choices shown. English is always
+// on one side, giving four modes the lesson randomly switches between:
+//   image  clue → English choices  |  English clue → image  choices
+//   native clue → English choices  |  English clue → native choices
+export type ClueKind = 'image' | 'englishWord' | 'nativeWord';
+export type ChoiceKind = 'image' | 'englishWord' | 'nativeWord';
 export interface ClimbRound {
   target: ApiWord;
-  promptKind: ClimbPromptKind;
+  clueKind: ClueKind;
+  choiceKind: ChoiceKind;
 }
+
+// The four (clue, choices) modes; each round is assigned one the data supports.
+const CLIMB_MODES: Array<{ clueKind: ClueKind; choiceKind: ChoiceKind }> = [
+  { clueKind: 'image', choiceKind: 'englishWord' },
+  { clueKind: 'englishWord', choiceKind: 'image' },
+  { clueKind: 'nativeWord', choiceKind: 'englishWord' },
+  { clueKind: 'englishWord', choiceKind: 'nativeWord' },
+];
+const CLIMB_CHOICE_COUNT = 6; // tiles per round (1 correct + distractors)
 
 // A concrete renderable step. The lesson is now a single Climb to Safety step
 // that plays LESSON_LENGTH rounds back-to-back; the other kinds are retained for
@@ -44,18 +56,38 @@ function makeBag<T>(pool: T[]): () => T {
 const hasNative = (w: ApiWord, language: string) => !!w.translations?.[language]?.[0]?.word;
 const hasImage = (w: ApiWord) => !!w.pictureUrl;
 
-/** Build the LESSON_LENGTH climb rounds from a pool of playable words. Each
- *  round's prompt is the word's native translation, its picture, or — when both
- *  exist — a coin flip between them. */
+/** Which of the four modes a target supports, given how many words in the pool
+ *  carry a picture / a native translation (image & native CHOICES need a poolful). */
+function availableModes(
+  target: ApiWord, language: string, picturedCount: number, nativeCount: number,
+): Array<{ clueKind: ClueKind; choiceKind: ChoiceKind }> {
+  const img = hasImage(target);
+  const nat = hasNative(target, language);
+  const modes: Array<{ clueKind: ClueKind; choiceKind: ChoiceKind }> = [];
+  if (img) modes.push(CLIMB_MODES[0]);                                        // image clue → English choices
+  if (img && picturedCount >= CLIMB_CHOICE_COUNT) modes.push(CLIMB_MODES[1]); // English clue → image choices
+  if (nat) modes.push(CLIMB_MODES[2]);                                        // native clue → English choices
+  if (nat && nativeCount >= CLIMB_CHOICE_COUNT) modes.push(CLIMB_MODES[3]);   // English clue → native choices
+  return modes;
+}
+
+/** Build the LESSON_LENGTH climb rounds, each assigned a random clue/choice mode
+ *  the data supports, so the lesson switches between image/native/English forms. */
 function buildRounds(pool: ApiWord[], language: string): ClimbRound[] {
+  const picturedCount = pool.filter(hasImage).length;
+  const nativeCount = pool.filter((w) => hasNative(w, language)).length;
   const nextTarget = makeBag(pool);
   return Array.from({ length: LESSON_LENGTH }, (): ClimbRound => {
-    const target = nextTarget();
-    const canWord = hasNative(target, language);
-    const canImage = hasImage(target);
-    const promptKind: ClimbPromptKind =
-      canWord && canImage ? (Math.random() < 0.5 ? 'word' : 'image') : canWord ? 'word' : 'image';
-    return { target, promptKind };
+    // pool is pre-filtered to playable words, so a mode always exists; refill
+    // past any (defensive) target that yields none.
+    let target = nextTarget();
+    let modes = availableModes(target, language, picturedCount, nativeCount);
+    for (let guard = 0; modes.length === 0 && guard < pool.length; guard++) {
+      target = nextTarget();
+      modes = availableModes(target, language, picturedCount, nativeCount);
+    }
+    const m = modes[Math.floor(Math.random() * modes.length)] ?? CLIMB_MODES[2];
+    return { target, clueKind: m.clueKind, choiceKind: m.choiceKind };
   });
 }
 
@@ -75,7 +107,8 @@ export async function buildLesson(profile: Profile, lessonsCompleted: number): P
     const nextImage = makeBag(pics);
     const rounds: ClimbRound[] = Array.from({ length: LESSON_LENGTH }, () => ({
       target: nextImage(),
-      promptKind: 'image',
+      clueKind: 'image',
+      choiceKind: 'englishWord',
     }));
     return {
       number: lessonsCompleted + 1,

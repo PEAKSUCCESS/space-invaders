@@ -22,16 +22,21 @@ Hitting **Start** builds a **lesson** of `LESSON_LENGTH = 15` word challenges (`
 
 ### The game: Climb to Safety
 
-The whole lesson is a **single self-paced `climb` step** of `LESSON_LENGTH = 15` rounds, rendered by `src/components/ClimbToSafety.tsx`. The learner is the chosen **avatar climbing a ladder** (round portrait "head" with limbs gripping the rungs) while **water rises continuously** from the bottom:
+The whole lesson is a **single self-paced `climb` step** of `LESSON_LENGTH = 15` rounds, rendered by `src/components/ClimbToSafety.tsx`. The learner is a **hiker climbing a ladder** (a back-view SVG `HikerClimber` in `ClimbToSafety.tsx` — cap + backpack facing the ladder, hands on the rungs, no poles — mimicking the `public/hiker.png` palette) to stay above **water that only ever rises**:
 
-- Each round shows a **prompt** (the word's native translation or its picture — `ClimbRound`/`ClimbPromptKind` in `lesson.ts`) and 6 English **handhold** tiles, one correct.
-- Grabbing the **correct** handhold pulls the climber up a rung (the survival `buffer` jumps by `CLIMB_BOOST`, the water recedes), fires confetti, speaks the word, and advances after `ADVANCE_DELAY_MS`. The **first grab** of each round is graded to the API via `onAnswer` (mode `translation` for a word prompt, `identification` for an image) — one answer per word.
-- A **wrong** grab crumbles that hold and surges the water (`WRONG_PENALTY`); the round stays open until the correct hold is grabbed.
-- The `buffer` (seconds of separation from the water) **drains continuously** at `DRAIN_PER_SEC` via a `requestAnimationFrame` loop that writes the water height imperatively (no per-frame re-render of the holds). It pauses during the celebrate gap and while the **feedback modal** is open (`paused` prop, wired to `feedbackOpen` in `App`).
-- When the **water covers the climber** (`buffer ≤ 0`) the game ends: a "Swept away!" overlay with **Try again**, which replays the lesson from the first ledge (answers already submitted this run still counted). Surviving all 15 rounds → normal `onComplete` → the `LessonComplete` celebration.
-- Tuning constants (`START_BUFFER`, `MAX_BUFFER`, `CLIMB_BOOST`, `WRONG_PENALTY`, `DRAIN_PER_SEC`) sit at the top of `ClimbToSafety.tsx`; the water-height layout constants (`WATER_FLOOR`, `DANGER`) mirror the `.climb-*` CSS in `index.css`.
+- **Layout:** the **clue** sits at the top, the **choices** in a tile band right below it, then the climb **scene** (ladder + hiker + water) fills the rest.
+- **Four modes** (`ClueKind`/`ChoiceKind` in `lesson.ts`), randomly switched per round — English is always on one side: image clue → English choices · English clue → image choices · native clue → English choices · English clue → native choices. `buildRounds` assigns each round a mode the data supports (image modes need pictured words; native modes need `translations[lang]`; image/native **choices** also need ~6 such words in the bin). 6 tiles per round, one correct.
+- Picking the **correct** choice raises the hiker one step up the ladder (`climberPos += CLIMB_STEP`, a CSS `bottom` transition animates the climb), fires confetti, speaks the word, and advances after `ADVANCE_DELAY_MS`. The **first pick** of each round is graded via `onAnswer` (`identification` when an image is involved, else `translation`) — one answer per word.
+- A **wrong** pick **surges the water up** (`WRONG_SURGE`; the water never recedes); the round stays open until the correct choice is picked.
+- The **water only rises** — continuously at `WATER_RISE_PER_SEC` via a `requestAnimationFrame` loop that writes its height imperatively (no per-frame re-render of the tiles), pausing during the celebrate gap and while the **feedback modal** is open (`paused` prop, wired to `feedbackOpen` in `App`). Two animated SVG wave crests ride the surface.
+- When the **water reaches the hiker's feet** (`waterPos ≥ climberPos`) the game ends: a "Swept away!" overlay with **Try again** (replays from the bottom; answers already submitted still counted). Surviving all 15 rounds → `onComplete` → the `LessonComplete` celebration.
+- Tuning constants (`CLIMBER_START`, `CLIMB_STEP`, `CLIMBER_MAX`, `WATER_RISE_PER_SEC`, `WRONG_SURGE`) sit at the top of `ClimbToSafety.tsx`.
 
 > The PickOne / Matching / sentence challenges described below are **retained components** (`App` still renders them per `LessonStep.kind`), but `buildLesson` currently produces only `climb` steps — they're kept for the stage-only PICS ONLY path and future challenge types.
+
+### Completion timer & leaderboard
+
+`App` clocks each game (`lessonStartRef`) and counts wrong answers (`wrongCountRef`); on the final round it computes the total time + whether the run was **flawless** (no wrong answers) and POSTs them via `submitTime` (`appApi.ts`, `app: 'survival'`). The `LessonComplete` "Great job!" screen shows the **time** and, for flawless runs, its **rank among all flawless runs** for this app (`#rank of N`, or "🏆 New best" at rank 1); non-flawless runs show a "finish with no mistakes" nudge, and the PICS ONLY review is skipped. ⚠️ The **`POST /api/app/times`** endpoint + `lesson_times` table live in **peakvocab-api** (not this repo); until they exist `submitTime` fails gracefully — the time still shows, just no rank.
 
 ### Challenge modes (all word-based)
 
