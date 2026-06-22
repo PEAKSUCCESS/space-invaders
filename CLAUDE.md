@@ -138,7 +138,7 @@ Light theme with a cream background and orange accents (`src/index.css` `:root`)
 
 ## Deployment
 
-Vercel — `peak-esl1` team (PeakSuccess). Deploys auto-trigger on pushes to the GitHub repo (`PEAKSUCCESS/peakvocab-challenges`). **Set `VITE_APP_TOKEN` (and any `VITE_VOCAB_API_URL` override) in the Vercel project env** or writes will 401 in the deployed build. Branches: `main` (prod) and `stage`.
+Vercel — `peak-esl1` team (PeakSuccess). Deploys auto-trigger on pushes to the GitHub repo (`PEAKSUCCESS/peakvocab-survival`) → Vercel project **`peakvocab-survival`**. `VITE_APP_TOKEN` is set in the project env (Production, and Preview scoped to the `stage` branch) so deployed writes don't 401; add any `VITE_VOCAB_API_URL` override the same way. Branches: `main` (prod) and `stage` (preview/staging).
 
 ## Coding conventions
 
