@@ -1,0 +1,677 @@
+:root {
+  --bg: #FDFAF2;
+  --panel: #f4ead4;
+  --text: #2a1f0a;
+  --muted: #7a6a4f;
+  --accent: #EC7700;
+  --accent-2: #f72585;
+  --slot-outline: #EC7700;
+  --tile-bg: #FFB22F;
+  --tile-text: #2a1f0a;
+  --tile-selected: #ffd07a;
+  --tile-wrong: #ff6b6b;
+  --tile-reveal: #2e9e5b;
+  --tile-gone: transparent;
+  --shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+button { font-family: inherit; cursor: pointer; }
+
+.screen {
+  width: 100%;
+  min-height: 100vh;
+  padding: 32px 24px 104px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+h1 { font-size: 36px; margin: 0; letter-spacing: -0.5px; }
+h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
+
+/* ─── Start screen ─── */
+.start-screen { max-width: 720px; margin: 0 auto; }
+.section { width: 100%; }
+.chip-row { display: flex; gap: 12px; flex-wrap: wrap; }
+
+.journey { position: relative; width: 100%; padding-top: 68px; }
+.journey-bar {
+  position: relative;
+  width: 100%;
+  height: 36px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid #e2d5b0;
+  background: #efe4c8;
+}
+/* Topic scope, centred inside the (now taller) bar. */
+.journey-bar-scope {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 14px; pointer-events: none;
+}
+.journey-bar-scope > span {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.journey-fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+/* Next-level teaser that grows past 85%; sits over the right tail of the bar. */
+.journey-cap {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  opacity: 0.5;
+  transition: width 0.4s ease;
+}
+.journey-labels { display: flex; justify-content: space-between; width: 100%; margin-top: 8px; }
+
+/* ─── Streak buckets (learning / mastering / mastered) ─── */
+.streak-buckets { display: flex; gap: 16px; width: 100%; align-items: flex-start; }
+.streak-bucket {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  border: none; background: none; padding: 4px; cursor: pointer; font-family: inherit;
+}
+/* Solid HTML box sized to the book — gives a steady hover target (the angled
+   book SVG has transparent corners, so hovering it directly flickers). */
+.streak-book-wrap { display: block; width: 100%; max-width: 128px; line-height: 0; }
+.streak-book {
+  display: block; width: 100%; height: auto;
+  /* Two drop-shadows in every state (base glow is invisible) so the filter
+     transition interpolates smoothly instead of snapping. */
+  filter: drop-shadow(0 4px 5px rgba(42, 31, 10, 0.2)) drop-shadow(0 0 0 rgba(236, 119, 0, 0));
+  transition: filter .15s ease;
+  /* Own compositor layer so the page's continuous repaints (the infinite %-glow
+     animation, the bar's width transition) don't re-rasterise this shadow and
+     make the glow shimmer/drop while hovering. */
+  transform: translateZ(0);
+  will-change: filter;
+}
+/* Hover the book box (not the whole third-width column). Selected: stronger. */
+.streak-book-wrap:hover .streak-book {
+  filter: drop-shadow(0 4px 5px rgba(42, 31, 10, 0.2)) drop-shadow(0 0 7px rgba(236, 119, 0, 0.6));
+}
+.streak-bucket.selected .streak-book {
+  filter: drop-shadow(0 4px 6px rgba(42, 31, 10, 0.28)) drop-shadow(0 0 9px rgba(236, 119, 0, 0.9));
+}
+.streak-book-num {
+  fill: var(--text); font-family: inherit; font-weight: 800;
+  font-size: 38px; font-variant-numeric: tabular-nums;
+}
+.streak-bucket-title { font-size: 13px; color: var(--muted); margin-top: 10px; text-align: center; }
+.streak-bucket.selected .streak-bucket-title { color: var(--accent); font-weight: 700; }
+.streak-list {
+  width: 100%; margin-top: 12px; background: var(--panel); border-radius: 12px;
+  padding: 4px 14px; max-height: 240px; overflow-y: auto;
+}
+.streak-list-row {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 8px 0; border-bottom: 1px solid #e2d5b0;
+}
+.streak-list-row:last-child { border-bottom: none; }
+.streak-list-word { color: var(--text); }
+.streak-list-streak { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.streak-list-empty { color: var(--muted); text-align: center; padding: 10px; }
+
+/* ─── Word "i" info button + native-definition popover ─── */
+.word-info { position: relative; display: inline-flex; vertical-align: middle; }
+.word-info-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1.5px solid var(--accent); color: var(--accent);
+  background: rgba(255, 255, 255, 0.9);
+  font-family: Georgia, 'Times New Roman', serif; font-style: italic;
+  font-size: 12px; font-weight: 700; line-height: 1; cursor: pointer;
+  user-select: none;
+}
+.word-info-btn:hover { background: #fff; color: var(--text); border-color: var(--text); }
+/* Fixed-positioned (placed from JS) so it opens to the RIGHT of the icon and is
+   never clipped by the scrollable bucket list. transform centres it on the icon. */
+.word-info-pop {
+  position: fixed; z-index: 200; transform: translateY(-50%);
+  width: max-content; max-width: 260px;
+  background: var(--text); color: #fff;
+  padding: 9px 12px; border-radius: 8px; box-shadow: var(--shadow);
+  font-size: 13px; font-weight: 400; font-style: normal; line-height: 1.4;
+  text-align: left; white-space: normal;
+}
+.streak-list-word .word-info { margin-left: 6px; }
+.journey-label { font-size: 14px; color: var(--muted); }
+.journey-label.active { color: var(--text); font-weight: 600; }
+.journey-label.next { font-style: italic; }
+.journey-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-top: 18px;
+}
+.journey-selected { font-size: 15px; font-weight: 600; color: var(--text); }
+.journey-avatar {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateX(-50%);
+  transition: left 0.4s ease;
+}
+.journey-hiker {
+  height: 62px; width: auto;
+  display: block;
+}
+/* % label sitting inside the coloured fill (or just right of it when narrow),
+   with a soft glow that fades in and out. */
+.journey-bar-pct {
+  position: absolute; top: 0; bottom: 0; z-index: 3;
+  display: flex; align-items: center;
+  font-size: 14px; font-weight: 700; color: var(--text);
+  font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none;
+  animation: pct-glow 2.2s ease-in-out infinite;
+}
+@keyframes pct-glow {
+  0%, 100% { text-shadow: 0 0 2px rgba(236, 119, 0, 0.25); }
+  50% { text-shadow: 0 0 10px rgba(236, 119, 0, 0.95), 0 0 16px rgba(236, 119, 0, 0.55); }
+}
+.chip {
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 1px solid #e2d5b0;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 16px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.chip:hover { border-color: var(--accent); }
+.chip.on { background: var(--accent); color: #0a0d12; border-color: var(--accent); font-weight: 600; }
+
+.toggle {
+  display: inline-flex; align-items: center; gap: 12px; cursor: pointer;
+  user-select: none;
+}
+.toggle input { position: absolute; opacity: 0; pointer-events: none; }
+.toggle-track {
+  width: 44px; height: 24px; border-radius: 999px;
+  background: #c9bb95;
+  position: relative; transition: background 0.15s;
+  flex-shrink: 0;
+}
+.toggle-thumb {
+  position: absolute; top: 2px; left: 2px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  transition: transform 0.15s;
+}
+.toggle input:checked + .toggle-track { background: var(--accent); }
+.toggle input:checked + .toggle-track .toggle-thumb { transform: translateX(20px); }
+.toggle-label { font-size: 14px; color: var(--muted); }
+.chip-code { opacity: 0.6; font-size: 12px; margin-left: 4px; }
+.muted { color: var(--muted); }
+.muted.small { font-size: 13px; margin-top: 8px; }
+
+/* Topic (area) picker */
+.area-grid { display: flex; gap: 10px; flex-wrap: wrap; }
+.area-chip {
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid #e2d5b0;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 15px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.area-chip:hover { border-color: var(--accent); }
+.area-chip.selected { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+
+.avatar-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 8px;
+  width: 100%;
+  justify-content: center;
+}
+.speech-bubble {
+  position: relative;
+  background: var(--panel);
+  padding: 14px 20px;
+  border-radius: 18px;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  max-width: 280px;
+}
+.speech-bubble::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-right: 12px solid var(--panel);
+}
+
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 96px);
+  gap: 16px;
+  justify-content: center;
+}
+.locked-value {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+.locked-avatar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.locked-avatar-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+.avatar-badge {
+  border: 3px solid transparent;
+  border-radius: 16px;
+  background: var(--panel);
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.avatar-badge.interactive:hover { border-color: var(--accent); transform: translateY(-2px); }
+.avatar-badge.selected { border-color: var(--accent-2); }
+.avatar-badge img { display: block; object-fit: cover; }
+.avatar-fallback { line-height: 1; }
+
+.primary-btn {
+  padding: 14px 32px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #0a0d12;
+  border: none;
+  font-size: 18px;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+  transition: opacity 0.15s, transform 0.15s;
+}
+.primary-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.primary-btn.small { padding: 8px 16px; font-size: 14px; }
+.btn-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 10px;
+  vertical-align: -2px;
+  border: 2px solid rgba(10, 13, 18, 0.3);
+  border-top-color: #0a0d12;
+  border-radius: 50%;
+  animation: btn-spin 0.6s linear infinite;
+}
+@keyframes btn-spin { to { transform: rotate(360deg); } }
+.ghost-btn {
+  padding: 14px 24px;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid #e2d5b0;
+  font-size: 16px;
+}
+.ghost-btn.small { padding: 6px 14px; font-size: 14px; }
+
+.resume-banner {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--panel); padding: 12px 18px; border-radius: 12px;
+  margin: 20px auto 0; max-width: 720px;
+}
+.error-banner {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: var(--tile-wrong); color: #fff; padding: 12px 18px; border-radius: 8px;
+  max-width: 80vw;
+}
+
+.topbar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 20px; background: var(--panel); border-bottom: 1px solid #e2d5b0;
+  font-size: 14px; color: var(--muted);
+}
+.topbar-left { display: flex; align-items: baseline; gap: 12px; }
+.step-count {
+  font-size: 22px; font-weight: 800; color: var(--text);
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.step-count-total { font-size: 15px; font-weight: 600; color: var(--muted); }
+.step-meta { font-size: 13px; color: var(--muted); }
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.vol-slider { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; }
+.vol-slider input[type="range"] { width: 110px; accent-color: var(--accent); cursor: pointer; }
+.vol-pct { color: var(--muted); min-width: 36px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* "Give feedback" text link in the topbar. */
+.link-btn {
+  background: none; border: none; font-family: inherit; font-size: 14px;
+  color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline;
+}
+.link-btn:hover { color: var(--text); }
+
+/* ─── Modal (feedback) ─── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(42, 31, 10, 0.45); padding: 20px;
+}
+.modal {
+  background: var(--bg); border-radius: 16px; box-shadow: var(--shadow);
+  padding: 24px; width: 100%; max-width: 440px;
+}
+.modal h3 { margin: 0 0 4px; color: var(--text); }
+.modal-sub { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+.feedback-context { display: flex; justify-content: center; margin-bottom: 14px; }
+.feedback-image {
+  width: 160px; height: 160px; object-fit: contain;
+  background: var(--panel); border-radius: 12px; padding: 6px; box-shadow: var(--shadow);
+}
+.feedback-sentence { margin: 0; font-size: 18px; font-style: italic; color: var(--text); text-align: center; }
+.feedback-word { margin: 0; font-size: 24px; font-weight: 700; color: var(--text); text-align: center; }
+.feedback-textarea {
+  width: 100%; box-sizing: border-box; resize: vertical; font-family: inherit; font-size: 15px;
+  padding: 10px 12px; border: 1px solid #e2d5b0; border-radius: 10px;
+  background: #fff; color: var(--text);
+}
+.feedback-textarea:focus { outline: none; border-color: var(--accent); }
+.feedback-error { color: #c0392b; font-size: 14px; margin: 8px 0 0; }
+.feedback-thanks { font-size: 18px; font-weight: 600; color: var(--text); text-align: center; margin: 12px 0; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px; }
+
+/* ─── PICS ONLY (stage-only category) ─── */
+.pics-only-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+.pics-only-chip { border-style: dashed; }
+.pics-only-chip.selected { background: var(--accent); color: #fff; border-style: solid; }
+
+/* ─── Matching tiles ─── */
+.match-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+  width: min(640px, 100%);
+}
+.match-col { display: flex; flex-direction: column; gap: 12px; }
+.tile {
+  background: var(--tile-bg); color: var(--tile-text);
+  border: 2px solid transparent; border-radius: 10px;
+  padding: 14px 18px; font-size: 18px; font-weight: 500;
+  transition: background 0.15s, border-color 0.15s, opacity 0.4s;
+  min-height: 50px;
+}
+.tile:hover { border-color: var(--accent); }
+.tile.selected { background: var(--tile-selected); }
+.tile.wrong { background: var(--tile-wrong); color: #fff; }
+.tile.gone { background: transparent; pointer-events: none; opacity: 0; border: none; }
+/* Correct answer revealed after 3 wrong tries — green glow draws the eye. */
+.tile.reveal { border-color: var(--tile-reveal); animation: reveal-pulse 1.1s ease-in-out infinite; }
+@keyframes reveal-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(46, 158, 91, 0.25); }
+  50% { box-shadow: 0 0 0 6px rgba(46, 158, 91, 0.5); }
+}
+.answer-hint { color: var(--muted); font-size: 16px; text-align: center; margin: 4px 0 0; }
+.answer-hint strong { color: var(--tile-reveal); font-weight: 600; }
+
+/* ─── Hear and choose / translate ─── */
+.avatar-row { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.play-btn {
+  width: 64px; height: 64px; border-radius: 50%;
+  border: none; background: var(--accent); color: #0a0d12;
+  font-size: 26px; box-shadow: var(--shadow);
+}
+.play-btn:hover { transform: scale(1.05); }
+.construction {
+  display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+  min-height: 56px; padding: 12px;
+}
+.slot {
+  min-width: 80px; padding: 12px 16px; border-radius: 8px;
+  border: 2px dashed var(--slot-outline); color: var(--muted);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.slot.filled { border-style: solid; border-color: var(--accent); color: var(--text); background: var(--panel); }
+.slot.removable { cursor: pointer; }
+
+.tile-row {
+  display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+  max-width: 760px;
+}
+.word-tile { padding: 10px 16px; min-height: 0; }
+
+/* ─── PickOne (image / native / english / audio → tile) ─── */
+.pickone { gap: 28px; }
+.pickone-progress { color: var(--muted); font-size: 14px; letter-spacing: 0.5px; }
+.pickone-prompt {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 220px;
+  padding: 12px;
+}
+.pickone-prompt.image .pickone-image {
+  width: 220px; height: 220px;
+  object-fit: contain;
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  padding: 8px;
+}
+.pickone-prompt.image .pickone-emoji {
+  font-size: 160px; line-height: 1;
+}
+.pickone-prompt.text .pickone-word {
+  font-size: 56px; font-weight: 700; letter-spacing: -1px;
+  color: var(--text);
+  padding: 16px 32px;
+  background: var(--panel);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+.pickone-prompt.text button.pickone-word.replay {
+  border: none; cursor: pointer; font-family: inherit;
+  display: inline-flex; align-items: center; gap: 16px;
+}
+.pickone-prompt.text button.pickone-word.replay:hover { background: #ebe1cb; }
+.pickone-prompt.text .replay-icon {
+  font-size: 28px; color: var(--accent);
+}
+.pickone-prompt.text .pickone-def {
+  font-size: 24px; font-weight: 500; line-height: 1.4;
+  color: var(--text); text-align: center; max-width: 580px;
+  padding: 20px 28px;
+  background: var(--panel);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+/* "Click the correct English word" (native language), pinned above the prompt. */
+.pickone-instruction {
+  margin: 0; color: var(--muted);
+  font-size: 18px; font-weight: 600; text-align: center;
+}
+
+/* Skip / remove controls, pinned to the bottom of every exercise. */
+.skip-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;
+  padding: 16px; pointer-events: none;
+  background: linear-gradient(to top, var(--bg) 30%, transparent);
+}
+.skip-btn {
+  pointer-events: auto;
+  padding: 12px 28px; font-size: 15px; font-weight: 600; font-family: inherit;
+  color: var(--muted); background: var(--panel);
+  border: 1px solid #e2d5b0; border-radius: 999px; cursor: pointer;
+  box-shadow: var(--shadow); transition: transform 0.15s, background 0.15s, color 0.15s;
+}
+.skip-btn:hover { background: #ebe1cb; color: var(--text); transform: translateY(-1px); }
+.skip-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+.skip-btn:disabled:hover { background: var(--panel); color: var(--muted); }
+
+/* ─── Balloon Pop game ─── */
+.balloon-game {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 52px); /* below the sticky topbar */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.balloon-hud {
+  display: flex; align-items: center; justify-content: center; gap: 32px;
+  padding: 12px 16px; z-index: 6;
+  font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.bp-stat.correct { color: var(--tile-reveal); }
+.bp-stat.missed { color: var(--tile-wrong); }
+.bp-round { color: var(--muted); font-size: 16px; font-weight: 700; }
+
+/* Where the balloons rise. overflow:hidden clips them as they exit the top.
+   touch-action/user-select keep a moving or dragging press from being eaten by
+   scroll/zoom or text-selection gestures, so the pop always registers. */
+.balloon-field {
+  position: relative; flex: 1; overflow: hidden;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+
+/* The wrapper rises (translateY); the inner element is the visible balloon. On
+   pop the wrapper rise is paused (freezing the balloon's height) so the inner
+   can pop in place instead of snapping back to the bottom. */
+.bp-balloon {
+  position: absolute; bottom: -180px;
+  border: none; background: none; padding: 0; cursor: pointer;
+  animation-name: bp-rise;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+.bp-balloon.popped { animation-play-state: paused; pointer-events: none; }
+@keyframes bp-rise {
+  from { transform: translateY(0); }
+  to   { transform: translateY(calc(-100vh - 260px)); }
+}
+.bp-balloon-inner {
+  position: relative;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  width: 104px; height: 124px; padding: 0 10px;
+  border-radius: 50% 50% 47% 47%;
+  color: #fff; font-weight: 700; font-size: 16px; line-height: 1.15;
+  word-break: break-word;
+  box-shadow: inset -12px -14px 0 rgba(0, 0, 0, 0.15), var(--shadow);
+}
+/* Balloon knot + string. */
+.bp-balloon-inner::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  width: 2px; height: 26px; background: rgba(0, 0, 0, 0.18);
+}
+.bp-balloon:hover .bp-balloon-inner { filter: brightness(1.08); }
+.bp-balloon.popped .bp-balloon-inner { animation: bp-pop 0.32s ease-out forwards; }
+.bp-balloon.wrong .bp-balloon-inner { background: var(--tile-wrong) !important; }
+@keyframes bp-pop {
+  0%   { transform: scale(1); opacity: 1; }
+  45%  { transform: scale(1.35); opacity: 0.85; }
+  100% { transform: scale(0.15); opacity: 0; }
+}
+
+/* The prompt the learner is matching, pinned at the bottom. */
+.balloon-prompt {
+  position: relative; z-index: 6;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 12px 16px 28px;
+}
+.balloon-instruction { margin: 0; color: var(--muted); font-size: 16px; font-weight: 600; }
+.balloon-prompt-card {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 92px; padding: 14px 36px;
+  background: var(--panel); border-radius: 16px; box-shadow: var(--shadow);
+}
+.balloon-prompt-card.image { padding: 10px; }
+.balloon-prompt-word { font-size: 46px; font-weight: 700; letter-spacing: -1px; color: var(--text); }
+.balloon-prompt-img { width: 150px; height: 150px; object-fit: contain; display: block; }
+
+/* ─── Effects ─── */
+.fireworks-overlay {
+  position: fixed; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(255,255,255,0.04), rgba(0,0,0,0.4));
+}
+
+.lesson-complete {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 50;
+}
+.lesson-complete-levelup {
+  font-size: 26px; font-weight: 700; color: #ffd07a;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  animation: pop-in 0.5s ease-out both;
+}
+.lesson-complete-message {
+  font-size: 80px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -1px;
+  text-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 0 40px rgba(236, 119, 0, 0.6);
+  animation: pop-in 0.4s ease-out both;
+}
+@keyframes pop-in {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.balloons-overlay {
+  position: fixed; inset: 0; pointer-events: none; overflow: hidden;
+}
+.balloon {
+  position: absolute;
+  bottom: -80px;
+  width: 50px; height: 60px;
+  border-radius: 50% 50% 45% 45%;
+  box-shadow: inset -8px -10px 0 rgba(0,0,0,0.18);
+  animation-name: rise;
+  animation-timing-function: ease-in;
+  animation-fill-mode: forwards;
+}
+.balloon::after {
+  content: '';
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  width: 1px; height: 60px; background: rgba(255,255,255,0.3);
+}
+@keyframes rise {
+  0% { transform: translateY(0); opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(-110vh); opacity: 0.2; }
+}
+
+/* shake when wrong on translate Test */
+.shaking { animation: shake 0.5s ease-in-out; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+  20%, 40%, 60%, 80% { transform: translateX(8px); }
+}
