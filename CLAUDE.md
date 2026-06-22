@@ -140,6 +140,8 @@ Light theme with a cream background and orange accents (`src/index.css` `:root`)
 
 Vercel — `peak-esl1` team (PeakSuccess). Deploys auto-trigger on pushes to the GitHub repo (`PEAKSUCCESS/peakvocab-survival`) → Vercel project **`peakvocab-survival`**. `VITE_APP_TOKEN` is set in the project env (Production, and Preview scoped to the `stage` branch) so deployed writes don't 401; add any `VITE_VOCAB_API_URL` override the same way. Branches: `main` (prod) and `stage` (preview/staging).
 
+**Branch → environment workflow** (one repo, two branches): push `stage` → Vercel **preview/staging** deploy at the stage URL `https://peakvocab-survival-git-stage-peak-esl1.vercel.app`; push `main` → **Production** at `https://peakvocab-survival.vercel.app`. Brad's shorthand: **"Go stage"** = commit + push to `stage`; **"Go live"** = commit + push to `main`. **Never push `main` unless told "Go live."**
+
 ## Coding conventions
 
 - The vocab corpus is **never bundled** — always fetch on demand via `src/lib/appApi.ts`.
