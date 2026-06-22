@@ -12,6 +12,7 @@ export interface LaunchParams {
   areas?: AreaCode[];
   audio?: boolean;
   autostart?: boolean;
+  callbackURL?: string;     // hub return URL; navigated to when a game completes/quits
 }
 
 const SUPPORTED_LANGUAGES: LanguageCode[] = [
@@ -69,6 +70,11 @@ export function parseLaunchParams(search: string): LaunchParams {
   if (rawAudio != null) out.audio = rawAudio !== '0' && rawAudio !== 'false';
 
   if (params.get('autostart') === '1') out.autostart = true;
+
+  // Hub return target: the game navigates here when completed or quit. Only accept
+  // http(s) URLs (so a crafted ?callbackURL=javascript:… can't run).
+  const rawCallback = params.get('callbackURL') ?? params.get('callbackUrl') ?? params.get('callback');
+  if (rawCallback && /^https?:\/\//i.test(rawCallback)) out.callbackURL = rawCallback;
 
   return out;
 }

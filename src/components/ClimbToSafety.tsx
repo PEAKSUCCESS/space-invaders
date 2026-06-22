@@ -78,6 +78,49 @@ function HikerClimber() {
   );
 }
 
+function Fish({ body, tail }: { body: string; tail: string }) {
+  return (
+    <svg viewBox="0 0 28 16" width="32" height="18">
+      <path d="M8 8 L0 2 L0 14 Z" fill={tail} />
+      <ellipse cx="16" cy="8" rx="9" ry="5.2" fill={body} />
+      <circle cx="21" cy="6.3" r="1.1" fill="#16242c" />
+    </svg>
+  );
+}
+
+// Decorative marine life drifting in the water — a whale, a shark, fish, and
+// swaying seaweed. Clipped to the water body, so they surface as the water rises.
+function SeaLife() {
+  return (
+    <div className="climb-sealife" aria-hidden="true">
+      <span className="sea whale">
+        <svg viewBox="0 0 96 46" width="120" height="57">
+          <path d="M92 22 Q70 8 40 14 Q16 18 6 12 Q2 14 4 20 Q1 24 5 30 Q12 27 22 28 Q14 33 18 38 Q26 34 34 33 Q64 38 92 26 Q96 24 92 22 Z" fill="#2f5d88" />
+          <path d="M40 30 Q60 36 86 27 Q66 33 40 30 Z" fill="#9cc0dd" opacity="0.5" />
+          <circle cx="84" cy="20" r="1.6" fill="#0d1f2e" />
+        </svg>
+      </span>
+      <span className="sea shark">
+        <svg viewBox="0 0 64 28" width="74" height="32">
+          <path d="M61 14 Q44 7 26 11 L5 5 Q10 14 5 23 L26 17 Q44 21 61 14 Z" fill="#90a7b5" />
+          <path d="M30 9 L26 1 L20 10 Z" fill="#7d94a2" />
+          <path d="M28 17 L24 23 L34 18 Z" fill="#7d94a2" />
+          <circle cx="52" cy="13" r="1.3" fill="#10212c" />
+          <g stroke="#7d94a2" strokeWidth="1"><line x1="46" y1="10" x2="45" y2="17" /><line x1="49" y1="10" x2="48" y2="17" /></g>
+        </svg>
+      </span>
+      <span className="sea fish f1"><Fish body="#f59c3f" tail="#ef8a3a" /></span>
+      <span className="sea fish f2"><Fish body="#f0cf4d" tail="#e7c13a" /></span>
+      <span className="sea fish f3"><Fish body="#f08a4a" tail="#e8743a" /></span>
+      <span className="sea fish f4"><Fish body="#ef7d7d" tail="#d95a5a" /></span>
+      <span className="weed w1"><svg viewBox="0 0 20 80" width="22" height="84"><path d="M10 80 C4 64 16 54 9 40 C3 28 15 18 9 2" fill="none" stroke="#2f7d3f" strokeWidth="5.5" strokeLinecap="round" /><path d="M9 44 C15 40 18 45 17 52" fill="none" stroke="#2f7d3f" strokeWidth="3.5" strokeLinecap="round" /></svg></span>
+      <span className="weed w2"><svg viewBox="0 0 20 64" width="20" height="68"><path d="M10 64 C16 50 4 42 11 30 C16 20 6 12 11 2" fill="none" stroke="#368a46" strokeWidth="5" strokeLinecap="round" /></svg></span>
+      <span className="weed w3"><svg viewBox="0 0 20 90" width="22" height="94"><path d="M10 90 C3 72 17 60 9 44 C2 30 16 20 10 2" fill="none" stroke="#2a7038" strokeWidth="6" strokeLinecap="round" /><path d="M10 50 C3 46 1 52 3 58" fill="none" stroke="#2a7038" strokeWidth="3.5" strokeLinecap="round" /></svg></span>
+      <span className="weed w4"><svg viewBox="0 0 20 54" width="20" height="58"><path d="M10 54 C15 42 5 34 11 22 C15 14 7 8 11 2" fill="none" stroke="#37934a" strokeWidth="4.5" strokeLinecap="round" /></svg></span>
+    </div>
+  );
+}
+
 function nativeOf(w: ApiWord, language: LanguageCode): string | undefined {
   return w.translations?.[language]?.[0]?.word;
 }
@@ -292,6 +335,7 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
           <svg className="climb-wave front" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true">
             <path d="M0 10 q 25 -10 50 0 t 50 0 t 50 0 t 50 0 V20 H0 Z" />
           </svg>
+          <SeaLife />
         </div>
 
         {gameOver && (

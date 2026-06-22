@@ -639,6 +639,26 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
 .climb-wave.front { fill: rgba(74, 172, 222, 0.9); animation: climb-wave 3s linear infinite; }
 @keyframes climb-wave { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
+/* Marine life, clipped to the water body so it surfaces as the water rises. */
+.climb-sealife { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.climb-sealife span { position: absolute; display: block; }
+.climb-sealife svg { display: block; }
+.sea { left: 0; opacity: 0.92; }
+.sea.whale { bottom: 14px; animation: swim-r 30s linear infinite; }
+.sea.shark { bottom: 96px; animation: swim-l 18s linear infinite; }
+.sea.fish.f1 { bottom: 52px; animation: swim-r 11s linear infinite; animation-delay: -2s; }
+.sea.fish.f2 { bottom: 120px; animation: swim-l 9s linear infinite; animation-delay: -5s; }
+.sea.fish.f3 { bottom: 168px; animation: swim-r 13s linear infinite; animation-delay: -8s; }
+.sea.fish.f4 { bottom: 38px; animation: swim-l 10.5s linear infinite; animation-delay: -1s; }
+@keyframes swim-r { from { transform: translateX(-20vw); } to { transform: translateX(120vw); } }
+@keyframes swim-l { from { transform: translateX(120vw) scaleX(-1); } to { transform: translateX(-20vw) scaleX(-1); } }
+.weed { bottom: 0; transform-origin: bottom center; animation: sway 4s ease-in-out infinite; }
+.weed.w1 { left: 7%; }
+.weed.w2 { left: 26%; animation-duration: 5s; }
+.weed.w3 { left: 64%; animation-duration: 4.6s; }
+.weed.w4 { left: 85%; animation-duration: 5.4s; }
+@keyframes sway { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+
 /* Game-over: the water swallowed the climber. */
 .climb-over {
   position: absolute; inset: 0; z-index: 10;

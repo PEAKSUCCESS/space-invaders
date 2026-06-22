@@ -172,17 +172,29 @@ function App() {
     setPhase({ kind: 'challenge', index: nextIndex });
   }
 
+  // Return to the launching hub (the Challenges landing page) when one was provided
+  // via ?callbackURL=; otherwise fall back to this game's own start screen.
+  function returnToLanding(): boolean {
+    if (launchParams.callbackURL) {
+      window.location.href = launchParams.callbackURL;
+      return true;
+    }
+    return false;
+  }
+
   function onCelebrationDone() {
+    if (returnToLanding()) return;
     setProfile(null);
     setLesson(null);
     setAutostartConsumed(true);
     setPhase({ kind: 'start' });
   }
 
-  // Quit the current lesson and return to the start screen. Non-destructive:
-  // keeps the save, lesson count, and cached progress (server is authoritative
-  // anyway) so the start screen still shows the learner's progress and resume.
+  // Quit the current lesson. With a hub callbackURL, returns to the Challenges
+  // landing page; otherwise falls back to this game's start screen (non-destructive:
+  // keeps the save, lesson count, and cached progress, so resume/progress persist).
   function onQuit() {
+    if (returnToLanding()) return;
     setProfile(null);
     setLesson(null);
     setLevelUp(null);
