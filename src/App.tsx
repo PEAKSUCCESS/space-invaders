@@ -46,6 +46,9 @@ function App() {
   const [flawless, setFlawless] = useState(false);
   const [timeResult, setTimeResult] = useState<TimeResult | null>(null);
   const [rankPending, setRankPending] = useState(false);
+  // Game start (state) so the countdown dial resets when a run restarts; the ref
+  // mirror is what the completion timing reads.
+  const [gameStartMs, setGameStartMs] = useState<number | null>(null);
   // Once an auto-started (hub deep-link) session returns to the start screen
   // (lesson finished or Quit), stop forcing the loading screen so the normal
   // start screen shows instead of a stuck "Loading…".
@@ -98,7 +101,9 @@ function App() {
       setProfile(p);
       writeSave({ ...p, lessonsCompleted, lastUpdated: Date.now() });
       // Start the game clock + reset per-game tracking and the last result.
-      lessonStartRef.current = Date.now();
+      const startedAt = Date.now();
+      lessonStartRef.current = startedAt;
+      setGameStartMs(startedAt);
       wrongCountRef.current = 0;
       setLessonTimeMs(null);
       setFlawless(false);
@@ -317,9 +322,10 @@ function App() {
           audio={profile.audio}
           paused={feedbackOpen}
           config={gameConfig}
-          startTime={lessonStartRef.current ?? undefined}
+          startTime={gameStartMs ?? undefined}
           targetMs={raceTargetMs}
           targetLabel={raceLabel}
+          onRetry={() => { const now = Date.now(); lessonStartRef.current = now; setGameStartMs(now); wrongCountRef.current = 0; }}
           onAnswer={handleAnswer}
           onComplete={onChallengeComplete}
         />

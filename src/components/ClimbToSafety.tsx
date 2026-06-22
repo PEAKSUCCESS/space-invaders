@@ -21,12 +21,13 @@ interface Props {
   startTime?: number;              // game start timestamp (for the countdown dial)
   targetMs?: number;               // dial target — the leaderboard best or the par time
   targetLabel?: string;            // 'best' | 'par'
+  onRetry?: () => void;            // "Try again" after drowning — restart the run timer
   onAnswer: (senseId: string, correct: boolean, mode: AnswerMode) => void;
   onComplete: () => void;
 }
 
 const CHOICE_COUNT = 6;          // tiles per round (1 correct + distractors)
-const ADVANCE_DELAY_MS = 750;    // celebrate the climb before the next round
+const ADVANCE_DELAY_MS = 500;    // celebrate the climb before the next round
 
 // Ascent model (all in % of the scene height): the climber rises a fixed step per
 // correct answer; the water only ever RISES — continuously over time, plus a surge
@@ -172,7 +173,7 @@ function buildChoices(target: ApiWord, choiceKind: ChoiceKind, pool: ApiWord[], 
   return shuffle([correct, ...pickN(distractors, CHOICE_COUNT - 1)]);
 }
 
-export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, paused = false, config, startTime, targetMs, targetLabel, onAnswer, onComplete }: Props) {
+export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, paused = false, config, startTime, targetMs, targetLabel, onRetry, onAnswer, onComplete }: Props) {
   const total = rounds.length;
   const [roundIndex, setRoundIndex] = useState(0);
   const [gameOver, setGameOver] = useState(false);
@@ -294,6 +295,7 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
   // Replay the whole climb from the bottom. Answers already submitted this run
   // still counted server-side; re-answering simply re-scores those words.
   function retry() {
+    onRetry?.(); // restart the run clock so the time measures only this attempt
     waterPosRef.current = 0;
     climberPosRef.current = CLIMBER_START;
     lastTsRef.current = null;
