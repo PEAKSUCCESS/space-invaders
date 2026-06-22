@@ -616,7 +616,7 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
    `bottom` is set inline and a transition animates each climb. */
 .climb-climber {
   position: absolute; left: 50%; transform: translateX(-50%);
-  width: 70px; height: 86px; z-index: 5; pointer-events: none;
+  width: 62px; height: 95px; z-index: 5; pointer-events: none;
   transition: bottom 0.55s cubic-bezier(0.22, 1, 0.36, 1);
   filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.3));
 }

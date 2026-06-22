@@ -28,39 +28,52 @@ const ADVANCE_DELAY_MS = 750;    // celebrate the climb before the next round
 // rounds to escape. Tuned so a steady pace stays ahead and dithering drowns you.
 const CLIMBER_START = 8;
 const CLIMB_STEP = 4.3;          // ~15 climbs → near CLIMBER_MAX
-const CLIMBER_MAX = 72;          // clamp so the sprite never clips the top
+const CLIMBER_MAX = 70;          // clamp so the sprite never clips the top
 const WATER_RISE_PER_SEC = 0.75;
 const WRONG_SURGE = 3;
 const FEET_MARGIN = 1;           // water within this % of the feet = caught
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-// A back-view hiker climbing the ladder (cap + backpack facing us, hands gripping
-// a rung overhead, boots on a rung) — mimics public/hiker.png's palette, no poles.
+// A slim back-view hiker climbing the ladder (cap + ponytail + small green pack
+// facing us, hands gripping a rung overhead, boots planted on a rung) — mimics
+// public/hiker.png's palette (olive shirt/skin, orange cap, brown pants), no poles.
 function HikerClimber() {
   return (
-    <svg viewBox="0 0 90 112" className="climb-hiker" role="img" aria-label="climber">
+    <svg viewBox="0 0 80 122" className="climb-hiker" role="img" aria-label="climber">
+      {/* legs */}
       <g strokeLinecap="round" fill="none">
-        <line x1="34" y1="45" x2="28" y2="30" stroke="#6f7d3f" strokeWidth="10" />
-        <line x1="56" y1="45" x2="62" y2="30" stroke="#6f7d3f" strokeWidth="10" />
-        <line x1="34" y1="44" x2="21" y2="13" stroke="#e7b58c" strokeWidth="8.5" />
-        <line x1="56" y1="44" x2="69" y2="13" stroke="#e7b58c" strokeWidth="8.5" />
+        <line x1="36" y1="64" x2="35" y2="101" stroke="#845424" strokeWidth="7" />
+        <line x1="44" y1="64" x2="46" y2="101" stroke="#845424" strokeWidth="7" />
       </g>
-      <circle cx="20" cy="12" r="5.5" fill="#d99b6c" />
-      <circle cx="70" cy="12" r="5.5" fill="#d99b6c" />
-      <path d="M35 30 a10 10 0 0 1 20 0 z" fill="#df7026" />
-      <ellipse cx="45" cy="31" rx="8.5" ry="8.5" fill="#e9b78f" />
-      <rect x="40" y="34" width="10" height="7" rx="3" fill="#caa074" />
-      <rect x="27" y="34" width="36" height="42" rx="11" fill="#525d66" />
-      <rect x="31" y="36" width="28" height="12" rx="6" fill="#414b54" />
-      <line x1="35" y1="44" x2="40" y2="72" stroke="#39424a" strokeWidth="5" strokeLinecap="round" />
-      <line x1="55" y1="44" x2="50" y2="72" stroke="#39424a" strokeWidth="5" strokeLinecap="round" />
+      {/* boots, flat on a rung */}
+      <rect x="28" y="100" width="13" height="7.5" rx="3" fill="#483024" />
+      <rect x="40" y="100" width="13" height="7.5" rx="3" fill="#483024" />
+      {/* arms (olive sleeve + olive-tan forearm) reaching up */}
       <g strokeLinecap="round" fill="none">
-        <polyline points="40,72 35,87 41,96" stroke="#7a4f26" strokeWidth="11" />
-        <line x1="51" y1="72" x2="55" y2="101" stroke="#7a4f26" strokeWidth="11" />
+        <line x1="34" y1="47" x2="26" y2="17" stroke="#786c3c" strokeWidth="7.5" />
+        <line x1="46" y1="47" x2="54" y2="17" stroke="#786c3c" strokeWidth="7.5" />
+        <line x1="30" y1="30" x2="25" y2="16" stroke="#cba06a" strokeWidth="6.2" />
+        <line x1="50" y1="30" x2="55" y2="16" stroke="#cba06a" strokeWidth="6.2" />
       </g>
-      <ellipse cx="41" cy="98" rx="8" ry="4.5" fill="#5a3a1e" />
-      <ellipse cx="56" cy="104" rx="8" ry="4.5" fill="#5a3a1e" />
+      {/* torso + small green daypack with straps */}
+      <rect x="32.5" y="42" width="15" height="25" rx="7" fill="#786c3c" />
+      <rect x="33.5" y="45" width="13" height="16" rx="5" fill="#5f6e39" />
+      <rect x="35.2" y="46.5" width="9.6" height="5.5" rx="2.5" fill="#4a5a2b" />
+      <path d="M34.5 47 q3 6 3.5 12" stroke="#3f4a26" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+      <path d="M45.5 47 q-3 6 -3.5 12" stroke="#3f4a26" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+      {/* hair on the back of the head + ponytail (matching brown), cap on top */}
+      <path d="M40 33 c -3.8 4 -4.4 12 -1.8 19 c 3 -3 3.8 -12 1.8 -19 z" fill="#5e4127" />
+      <ellipse cx="40" cy="34" rx="7.4" ry="7.6" fill="#5e4127" />
+      <ellipse cx="40" cy="28.8" rx="9.2" ry="7" fill="#d87830" />
+      <rect x="32.8" y="29" width="14.4" height="4" rx="2" fill="#bf6722" />
+      {/* hands gripping the rung, fingers curling over */}
+      <ellipse cx="25" cy="15" rx="5.8" ry="4.6" fill="#cba06a" />
+      <ellipse cx="55" cy="15" rx="5.8" ry="4.6" fill="#cba06a" />
+      <g stroke="#a9844e" strokeWidth="1.5" strokeLinecap="round">
+        <line x1="22.2" y1="16" x2="22.2" y2="20" /><line x1="25" y1="16.7" x2="25" y2="20.8" /><line x1="27.8" y1="16" x2="27.8" y2="20" />
+        <line x1="52.2" y1="16" x2="52.2" y2="20" /><line x1="55" y1="16.7" x2="55" y2="20.8" /><line x1="57.8" y1="16" x2="57.8" y2="20" />
+      </g>
     </svg>
   );
 }
