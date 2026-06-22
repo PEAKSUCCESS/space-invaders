@@ -31,7 +31,10 @@ const CLIMB_STEP = 4.3;          // ~15 climbs → near CLIMBER_MAX
 const CLIMBER_MAX = 70;          // clamp so the sprite never clips the top
 const WATER_RISE_PER_SEC = 0.75;
 const WRONG_SURGE = 3;
-const FEET_MARGIN = 1;           // water within this % of the feet = caught
+// The climber is "covered" (game over) only when the water reaches the top of the
+// head — ~78px above the sprite's bottom anchor (≈0.82 × the 95px climber height in
+// index.css), converted to a % of the live scene height each frame.
+const CLIMBER_HEAD_PX = 78;
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
@@ -185,8 +188,19 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
   const lastTsRef = useRef<number | null>(null);
   const pausedRef = useRef(paused);
   const waterRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<HTMLDivElement>(null);
+  const sceneHRef = useRef(0); // cached scene pixel height (for the head-coverage test)
 
   useEffect(() => { pausedRef.current = paused; }, [paused]);
+
+  // Cache the scene's pixel height so the head-coverage test stays accurate across
+  // screen sizes without reading layout every frame.
+  useEffect(() => {
+    const measure = () => { if (sceneRef.current) sceneHRef.current = sceneRef.current.offsetHeight; };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
 
   const round = rounds[roundIndex];
   // An image on either side → identification; native↔English → translation.
@@ -219,7 +233,9 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
       const live = !pausedRef.current && !advancingRef.current && !gameOverRef.current && !doneRef.current;
       if (live) waterPosRef.current = clamp(waterPosRef.current + dt * WATER_RISE_PER_SEC, 0, 100);
       if (waterRef.current) waterRef.current.style.height = `${waterPosRef.current}%`;
-      if (live && waterPosRef.current >= climberPosRef.current - FEET_MARGIN) {
+      // Game over only when the water rises above the climber's head (covered).
+      const headPct = climberPosRef.current + (CLIMBER_HEAD_PX / (sceneHRef.current || 320)) * 100;
+      if (live && waterPosRef.current >= headPct) {
         gameOverRef.current = true;
         setGameOver(true);
       }
@@ -321,7 +337,7 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
       </div>
 
       {/* The climb scene: ladder, hiker ascending, ever-rising water. */}
-      <div className="climb-scene">
+      <div className="climb-scene" ref={sceneRef}>
         <div className="climb-ladder" aria-hidden="true" />
 
         <div className="climb-climber" style={{ bottom: `${climberPos}%` }}>
