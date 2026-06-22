@@ -22,10 +22,10 @@ Hitting **Start** builds a **lesson** of `LESSON_LENGTH = 15` word challenges (`
 
 ### The game: Climb to Safety
 
-The whole lesson is a **single self-paced `climb` step** of `LESSON_LENGTH = 15` rounds, rendered by `src/components/ClimbToSafety.tsx`. The learner is a climber clinging to a cliff while **water rises continuously** from the bottom:
+The whole lesson is a **single self-paced `climb` step** of `LESSON_LENGTH = 15` rounds, rendered by `src/components/ClimbToSafety.tsx`. The learner is the chosen **avatar climbing a ladder** (round portrait "head" with limbs gripping the rungs) while **water rises continuously** from the bottom:
 
 - Each round shows a **prompt** (the word's native translation or its picture — `ClimbRound`/`ClimbPromptKind` in `lesson.ts`) and 6 English **handhold** tiles, one correct.
-- Grabbing the **correct** handhold pulls the climber up a ledge (the survival `buffer` jumps by `CLIMB_BOOST`, the water recedes), fires confetti, speaks the word, and advances after `ADVANCE_DELAY_MS`. The **first grab** of each round is graded to the API via `onAnswer` (mode `translation` for a word prompt, `identification` for an image) — one answer per word.
+- Grabbing the **correct** handhold pulls the climber up a rung (the survival `buffer` jumps by `CLIMB_BOOST`, the water recedes), fires confetti, speaks the word, and advances after `ADVANCE_DELAY_MS`. The **first grab** of each round is graded to the API via `onAnswer` (mode `translation` for a word prompt, `identification` for an image) — one answer per word.
 - A **wrong** grab crumbles that hold and surges the water (`WRONG_PENALTY`); the round stays open until the correct hold is grabbed.
 - The `buffer` (seconds of separation from the water) **drains continuously** at `DRAIN_PER_SEC` via a `requestAnimationFrame` loop that writes the water height imperatively (no per-frame re-render of the holds). It pauses during the celebrate gap and while the **feedback modal** is open (`paused` prop, wired to `feedbackOpen` in `App`).
 - When the **water covers the climber** (`buffer ≤ 0`) the game ends: a "Swept away!" overlay with **Try again**, which replays the lesson from the first ledge (answers already submitted this run still counted). Surviving all 15 rounds → normal `onComplete` → the `LessonComplete` celebration.

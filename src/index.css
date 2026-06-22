@@ -600,19 +600,58 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
   100% { transform: translateY(16px) rotate(4deg); opacity: 0.35; }
 }
 
-/* The climber clinging to the cliff, just above the waterline. */
+/* The ladder the climber ascends. z below the water so its lower rungs read as
+   submerged; the rungs are the element background, the rails are pseudo-elements. */
+.climb-ladder {
+  position: absolute; left: 50%; top: 0; bottom: 0; width: 80px;
+  transform: translateX(-50%); z-index: 2; pointer-events: none;
+  background: repeating-linear-gradient(to bottom, transparent 0 26px, #b9772f 26px 34px);
+}
+.climb-ladder::before, .climb-ladder::after {
+  content: ''; position: absolute; top: 0; bottom: 0; width: 11px;
+  background: linear-gradient(90deg, #c98a3c, #a5651f);
+  border-radius: 6px; box-shadow: inset -2px 0 0 rgba(0, 0, 0, 0.18);
+}
+.climb-ladder::before { left: 7px; }
+.climb-ladder::after { right: 7px; }
+
+/* The avatar, mid-climb on the ladder, just above the waterline. */
 .climb-climber {
   position: absolute; left: 50%; bottom: 30%;
-  width: 72px; height: 72px; transform: translateX(-50%);
+  width: 100px; height: 116px; transform: translateX(-50%);
   z-index: 5; pointer-events: none;
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.25));
+  filter: drop-shadow(0 5px 7px rgba(0, 0, 0, 0.28));
 }
-.climb-climber img { width: 100%; height: 100%; object-fit: contain; }
-.climb-climber-emoji { font-size: 60px; line-height: 72px; }
+/* Round portrait "head" (the start-page avatar), framed like a badge. */
+.cl-avatar {
+  position: absolute; left: 50%; top: 16px; transform: translateX(-50%);
+  width: 62px; height: 62px; border-radius: 50%; overflow: hidden;
+  border: 3px solid #fff; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25); background: #cfe5f0;
+}
+.cl-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cl-emoji { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 40px; }
+
+/* Arms reach up to grip a rung; legs plant on a rung below. The hand/boot are
+   pseudo-elements, and each limb shuffles in opposite phase for a climbing gait. */
+.cl-arm, .cl-leg { position: absolute; border-radius: 7px; }
+.cl-arm { top: 10px; width: 11px; height: 38px; background: #e7b58c; }
+.cl-arm::after { content: ''; position: absolute; top: -7px; left: -2px; width: 15px; height: 15px; border-radius: 50%; background: #d99b6c; }
+.cl-arm-l { left: 18px; transform-origin: bottom center; animation: cl-arm-l 1.15s ease-in-out infinite; }
+.cl-arm-r { right: 18px; transform-origin: bottom center; animation: cl-arm-r 1.15s ease-in-out infinite; }
+.cl-leg { bottom: 2px; width: 12px; height: 40px; background: #5b6b8a; }
+.cl-leg::after { content: ''; position: absolute; bottom: -4px; left: -3px; width: 18px; height: 10px; border-radius: 4px 5px 5px 4px; background: #3a2f1a; }
+.cl-leg-l { left: 26px; transform-origin: top center; animation: cl-leg-l 1.15s ease-in-out infinite; }
+.cl-leg-r { right: 26px; transform-origin: top center; animation: cl-leg-r 1.15s ease-in-out infinite; }
+@keyframes cl-arm-l { 0%, 100% { transform: rotate(16deg) translateY(0); } 50% { transform: rotate(6deg) translateY(-7px); } }
+@keyframes cl-arm-r { 0%, 100% { transform: rotate(-6deg) translateY(-7px); } 50% { transform: rotate(-16deg) translateY(0); } }
+@keyframes cl-leg-l { 0%, 100% { transform: rotate(-12deg) translateY(0); } 50% { transform: rotate(-3deg) translateY(6px); } }
+@keyframes cl-leg-r { 0%, 100% { transform: rotate(3deg) translateY(6px); } 50% { transform: rotate(12deg) translateY(0); } }
+
+/* A stronger upward scramble each time the climber answers correctly. */
 .climb-climber.hop { animation: climb-hop 0.5s ease-out; }
 @keyframes climb-hop {
   0% { transform: translateX(-50%) translateY(0); }
-  35% { transform: translateX(-50%) translateY(-16px); }
+  40% { transform: translateX(-50%) translateY(-18px); }
   100% { transform: translateX(-50%) translateY(0); }
 }
 

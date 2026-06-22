@@ -226,12 +226,23 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
           })}
         </div>
 
+        {/* The ladder the climber ascends to stay above the rising water. */}
+        <div className="climb-ladder" aria-hidden="true" />
+
+        {/* The avatar, mid-climb: round portrait "head" with arms/legs gripping
+            the rungs and a continuous climbing shuffle. */}
         <div className="climb-climber" ref={climberRef}>
-          {climberFailed ? (
-            <span className="climb-climber-emoji" role="img" aria-label="climber">🧗</span>
-          ) : (
-            <img src={avatar.imageUrl} alt="" onError={() => setClimberFailed(true)} draggable={false} />
-          )}
+          <span className="cl-arm cl-arm-l" />
+          <span className="cl-arm cl-arm-r" />
+          <span className="cl-leg cl-leg-l" />
+          <span className="cl-leg cl-leg-r" />
+          <span className="cl-avatar">
+            {climberFailed ? (
+              <span className="cl-emoji" role="img" aria-label="climber">🧗</span>
+            ) : (
+              <img src={avatar.imageUrl} alt="" onError={() => setClimberFailed(true)} draggable={false} />
+            )}
+          </span>
         </div>
 
         <div className="climb-water" ref={waterRef} style={{ height: `${waterPctFor(START_BUFFER)}%` }} />
