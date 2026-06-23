@@ -536,7 +536,8 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
 .climb-game {
   position: relative;
   width: 100%;
-  height: calc(100vh - 52px); /* below the sticky topbar */
+  height: calc(100vh - 52px); /* fallback for browsers without dvh */
+  height: calc(100dvh - 52px); /* dvh = the actual visible height on mobile (no 100vh overshoot) */
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -673,6 +674,26 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
 }
 .countdown-dial.behind { animation: dial-pulse 0.9s ease-in-out infinite; }
 @keyframes dial-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+
+/* ── Mobile: fit the whole game in the visible viewport with a compact header,
+   so the clue + choices stay on-screen and the ladder/scene never overruns. ── */
+@media (max-width: 480px) {
+  .topbar { padding: 9px 14px; }
+  .step-meta { font-size: 13px; }
+  .climb-hud { padding: 5px 12px 0; gap: 0; }
+  .climb-ledge { font-size: 15px; }
+  .climb-instruction { font-size: 12px; }
+  .climb-clue { padding: 2px 12px 5px; }
+  .climb-clue-card { min-height: 44px; padding: 5px 22px; }
+  .climb-clue-word { font-size: 27px; }
+  .climb-clue-img { width: 72px; height: 72px; }
+  .climb-choices { gap: 6px 8px; padding: 3px 8px 6px; }
+  .climb-choice { min-width: 58px; padding: 8px 11px; font-size: 13.5px; border-radius: 11px; }
+  .climb-choice.image { width: 60px; height: 60px; padding: 5px; }
+  .countdown-dial { top: 6px; right: 6px; }
+  .countdown-dial svg { width: 52px; height: 52px; }
+  .countdown-label { font-size: 8px; padding: 0 4px; }
+}
 
 /* Game-over: the water swallowed the climber. */
 .climb-over {
