@@ -71,21 +71,40 @@ function availableModes(
   return modes;
 }
 
-/** Build the LESSON_LENGTH climb rounds, each assigned a random clue/choice mode
- *  the data supports, so the lesson switches between image/native/English forms. */
+// The API removes a word from the bin (out of service) once its streak hits the
+// completion threshold; until then we keep every bin word in rotation but show it
+// LESS as its streak climbs. Weight is linear (streak 0 → COMPLETION_STREAK, near
+// mastery → 1), clamped to ≥1 so no in-service word is ever fully dropped.
+const COMPLETION_STREAK = 20;
+const streakWeight = (w: ApiWord) => Math.max(1, COMPLETION_STREAK - (w.streak ?? 0));
+
+/** Pick a word weighted by streak (lower streak → more frequent), excluding the
+ *  previous round's word so the same word never appears twice in a row. */
+function weightedPick(pool: ApiWord[], excludeSenseId: string | null): ApiWord {
+  const list = pool.filter((w) => w.senseId !== excludeSenseId);
+  const choices = list.length > 0 ? list : pool; // degenerate: a pool of one
+  const total = choices.reduce((sum, w) => sum + streakWeight(w), 0);
+  let r = Math.random() * total;
+  for (const w of choices) {
+    r -= streakWeight(w);
+    if (r <= 0) return w;
+  }
+  return choices[choices.length - 1];
+}
+
+/** Build the LESSON_LENGTH climb rounds. Targets are drawn **streak-weighted** —
+ *  lower-streak (less-known) words come up more often, mastered ones less, until
+ *  their streak takes them out of service — and never the same word twice in a row;
+ *  each gets a random clue/choice mode the data supports. */
 function buildRounds(pool: ApiWord[], language: string): ClimbRound[] {
   const picturedCount = pool.filter(hasImage).length;
   const nativeCount = pool.filter((w) => hasNative(w, language)).length;
-  const nextTarget = makeBag(pool);
+  let prevSenseId: string | null = null;
   return Array.from({ length: LESSON_LENGTH }, (): ClimbRound => {
-    // pool is pre-filtered to playable words, so a mode always exists; refill
-    // past any (defensive) target that yields none.
-    let target = nextTarget();
-    let modes = availableModes(target, language, picturedCount, nativeCount);
-    for (let guard = 0; modes.length === 0 && guard < pool.length; guard++) {
-      target = nextTarget();
-      modes = availableModes(target, language, picturedCount, nativeCount);
-    }
+    // pool is pre-filtered to playable words, so a mode always exists.
+    const target = weightedPick(pool, prevSenseId);
+    prevSenseId = target.senseId;
+    const modes = availableModes(target, language, picturedCount, nativeCount);
     const m = modes[Math.floor(Math.random() * modes.length)] ?? CLIMB_MODES[2];
     return { target, clueKind: m.clueKind, choiceKind: m.choiceKind };
   });
