@@ -25,7 +25,7 @@ const CLIMB_MODES: Array<{ clueKind: ClueKind; choiceKind: ChoiceKind }> = [
   { clueKind: 'nativeWord', choiceKind: 'englishWord' },
   { clueKind: 'englishWord', choiceKind: 'nativeWord' },
 ];
-const CLIMB_CHOICE_COUNT = 6; // tiles per round (1 correct + distractors)
+const CLIMB_CHOICE_COUNT = 4; // tiles per round (1 correct + distractors)
 
 // A concrete renderable step. The lesson is now a single Climb to Safety step
 // that plays LESSON_LENGTH rounds back-to-back; the other kinds are retained for

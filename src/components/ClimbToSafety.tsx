@@ -26,7 +26,7 @@ interface Props {
   onComplete: () => void;
 }
 
-const CHOICE_COUNT = 6;          // tiles per round (1 correct + distractors)
+const CHOICE_COUNT = 4;          // tiles per round (1 correct + distractors)
 const ADVANCE_DELAY_MS = 500;    // celebrate the climb before the next round
 
 // Ascent model (all in % of the scene height): the climber rises a fixed step per
