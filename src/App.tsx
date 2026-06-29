@@ -15,6 +15,7 @@ import { completeWord, fetchBestTime, imageUrl, submitAnswer, submitFeedback, su
 import { DEFAULT_CONFIG, loadGameConfig, type GameConfig } from './lib/gameConfig';
 import { loadProgress, loadSave, writeProgress, writeSave, type SaveState } from './game/save';
 import { parseLaunchParams } from './lib/launchParams';
+import { CHALLENGES_HUB_URL } from './lib/env';
 import { t } from './i18n/i18n';
 
 function profileFromSave(s: SaveState): Profile {
@@ -194,29 +195,38 @@ function App() {
     setPhase({ kind: 'challenge', index: nextIndex });
   }
 
-  // Return to the launching hub (the Challenges landing page) when one was provided
-  // via ?callbackURL=; otherwise fall back to this game's own start screen.
-  function returnToLanding(): boolean {
-    if (launchParams.callbackURL) {
-      window.location.href = launchParams.callbackURL;
+  // This game has no landing screen of its own — finishing a lesson or quitting
+  // ALWAYS returns to the Challenges hub. Prefer history.back(): the hub launched
+  // us in this same tab, so going back restores it from bfcache (instant, state
+  // intact). Otherwise hard-navigate to an explicit ?callbackURL= (when PLP
+  // supplied one) or the hub's known URL. Returns false only in local dev with no
+  // history, so the caller can fall back in-app (the game loop stays testable
+  // without a hub running).
+  function returnToHub(): boolean {
+    if (window.history.length > 1) {
+      window.history.back();
+      return true;
+    }
+    const dest = launchParams.callbackURL ?? (import.meta.env.DEV ? null : CHALLENGES_HUB_URL);
+    if (dest) {
+      window.location.href = dest;
       return true;
     }
     return false;
   }
 
   function onCelebrationDone() {
-    if (returnToLanding()) return;
+    if (returnToHub()) return;
     setProfile(null);
     setLesson(null);
     setAutostartConsumed(true);
     setPhase({ kind: 'start' });
   }
 
-  // Quit the current lesson. With a hub callbackURL, returns to the Challenges
-  // landing page; otherwise falls back to this game's start screen (non-destructive:
-  // keeps the save, lesson count, and cached progress, so resume/progress persist).
+  // Quit the current lesson — non-destructive: keeps the save, lesson count, and
+  // cached progress (server-authoritative), so resume/progress persist.
   function onQuit() {
-    if (returnToLanding()) return;
+    if (returnToHub()) return;
     setProfile(null);
     setLesson(null);
     setLevelUp(null);

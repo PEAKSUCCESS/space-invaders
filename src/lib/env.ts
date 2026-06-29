@@ -11,3 +11,14 @@ export const PICS_ONLY_ENABLED: boolean =
   import.meta.env.DEV ||
   __VERCEL_ENV__ === 'preview' ||
   import.meta.env.VITE_PICS_ONLY === '1';
+
+// The Challenges hub (landing page) this game returns to when a session is
+// completed or quit. We normally get back to it via history.back() (the hub
+// launched us in this same tab), so this URL is the fallback when there's no
+// history — tier-matched to this build (prod hub for main, stage branch-alias
+// otherwise). Override with VITE_CHALLENGES_URL.
+export const CHALLENGES_HUB_URL: string =
+  import.meta.env.VITE_CHALLENGES_URL ||
+  (__VERCEL_ENV__ === 'production'
+    ? 'https://peakvocab-challenges.vercel.app'
+    : 'https://peakvocab-challenges-git-stage-peak-esl1.vercel.app');
