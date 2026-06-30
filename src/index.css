@@ -673,22 +673,35 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
    animates `left` (fly across) while the inner svg bobs and the wings flap —
    three independent properties/elements, so the transforms never collide. */
 .climb-sky { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1; }
-.gull { position: absolute; width: 38px; }
+.gull { position: absolute; width: 44px; }
 .gull-svg {
-  display: block; width: 100%; height: auto; opacity: 0.92;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.08));
+  display: block; width: 100%; height: auto; opacity: 0.95;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.18));
   animation: gull-bob 2.6s ease-in-out infinite;
 }
 @keyframes gull-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 .gull-wing { transform-box: fill-box; }
-.gull-l { transform-origin: 100% 70%; animation: gull-flap-l 0.55s ease-in-out infinite; }
-.gull-r { transform-origin: 0% 70%; animation: gull-flap-r 0.55s ease-in-out infinite; }
-@keyframes gull-flap-l { 0%, 100% { transform: rotate(9deg); } 50% { transform: rotate(-20deg); } }
-@keyframes gull-flap-r { 0%, 100% { transform: rotate(-9deg); } 50% { transform: rotate(20deg); } }
+.gull-l { transform-origin: 100% 85%; animation: gull-flap-l 0.6s ease-in-out infinite; }
+.gull-r { transform-origin: 0% 85%; animation: gull-flap-r 0.6s ease-in-out infinite; }
+@keyframes gull-flap-l { 0%, 100% { transform: rotate(-13deg); } 50% { transform: rotate(11deg); } }
+@keyframes gull-flap-r { 0%, 100% { transform: rotate(13deg); } 50% { transform: rotate(-11deg); } }
 @keyframes gull-fly { from { left: -16%; } to { left: 116%; } }
-.gull.g1 { top: 9%;  width: 40px; animation: gull-fly 19s linear infinite; }
-.gull.g2 { top: 18%; width: 30px; animation: gull-fly 26s linear infinite; animation-delay: -8s; }
-.gull.g3 { top: 27%; width: 34px; transform: scaleX(-1); animation: gull-fly 23s linear infinite reverse; animation-delay: -4s; }
+.gull.g1 { top: 8%;  width: 48px; animation: gull-fly 19s linear infinite; }
+.gull.g2 { top: 17%; width: 36px; animation: gull-fly 26s linear infinite; animation-delay: -8s; }
+.gull.g3 { top: 26%; width: 42px; animation: gull-fly 23s linear infinite reverse; animation-delay: -4s; }
+
+/* Floating jellyfish drifting in the water (part of SeaLife, so they surface as
+   the water rises): a slow vertical drift, a pulsing bell, and swaying tentacles. */
+.jelly { opacity: 0.92; animation: jelly-drift 7s ease-in-out infinite; }
+.jelly-svg { display: block; width: 100%; height: auto; filter: drop-shadow(0 1px 3px rgba(40, 20, 60, 0.18)); }
+.jelly.j1 { left: 20%; bottom: 70px;  width: 30px; }
+.jelly.j2 { left: 58%; bottom: 150px; width: 24px; animation-duration: 8.5s; animation-delay: -3s; }
+.jelly.j3 { left: 84%; bottom: 58px;  width: 22px; animation-duration: 6.2s; animation-delay: -1.5s; }
+@keyframes jelly-drift { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+.jelly-bell { transform-box: fill-box; transform-origin: 50% 0%; animation: jelly-pulse 2.4s ease-in-out infinite; }
+@keyframes jelly-pulse { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.08, 0.86); } }
+.jelly-arms { transform-box: fill-box; transform-origin: 50% 0%; animation: jelly-sway 3.6s ease-in-out infinite; }
+@keyframes jelly-sway { 0%, 100% { transform: skewX(-6deg); } 50% { transform: skewX(6deg); } }
 
 /* A dolphin that occasionally leaps from the water surface. It lives inside the
    water and is anchored to the surface (bottom:100%), so it always jumps from

@@ -98,21 +98,39 @@ function Fish({ body, tail }: { body: string; tail: string }) {
   );
 }
 
-// A gliding seagull — white body, grey-tipped wings that flap (each wing group
-// rotates about the body via CSS). Flies across the sky band above the water.
+// A seagull in natural overhead flight — a symmetric "M" silhouette (head lump
+// + two up-swept wings with drooping tips) so it reads as a bird flying toward
+// you, not a side-on shape. Dark grey-blue for contrast on the pale sky; the
+// wings flap (each wing group rotates about the body via CSS).
 function Seagull() {
   return (
-    <svg viewBox="0 0 48 24" className="gull-svg" aria-hidden="true">
+    <svg viewBox="0 0 48 20" className="gull-svg" aria-hidden="true">
+      <ellipse cx="24" cy="9" rx="3.1" ry="2.5" fill="#4e5e6a" />
       <g className="gull-wing gull-l">
-        <path d="M24 13 Q14 3 3 8 Q13 9 24 14 Z" fill="#fbfdfe" stroke="#aebcc7" strokeWidth="0.9" />
-        <path d="M5 7.6 Q3.2 7 3 8 Q5 8.6 7.2 9 Z" fill="#5d6b76" />
+        <path d="M24 8.6 Q15 0.5 3 10.5" fill="none" stroke="#4e5e6a" strokeWidth="3.3" strokeLinecap="round" />
       </g>
       <g className="gull-wing gull-r">
-        <path d="M24 13 Q34 3 45 8 Q35 9 24 14 Z" fill="#fbfdfe" stroke="#aebcc7" strokeWidth="0.9" />
-        <path d="M43 7.6 Q44.8 7 45 8 Q43 8.6 40.8 9 Z" fill="#5d6b76" />
+        <path d="M24 8.6 Q33 0.5 45 10.5" fill="none" stroke="#4e5e6a" strokeWidth="3.3" strokeLinecap="round" />
       </g>
-      <ellipse cx="24" cy="13.5" rx="3" ry="2.2" fill="#f4f8fb" />
-      <path d="M26.5 13.2 l3 -0.3 -2.7 1.7 Z" fill="#f0a23a" />
+    </svg>
+  );
+}
+
+// A translucent floating jellyfish — a scalloped bell with a highlight and four
+// trailing tentacles. The bell pulses and the tentacles sway via CSS.
+function Jellyfish() {
+  return (
+    <svg viewBox="0 0 36 58" className="jelly-svg" aria-hidden="true">
+      <g className="jelly-arms" stroke="#c98fd6" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.8">
+        <path d="M10 26 q -2 8 1 15 q 2 6 -1 13" />
+        <path d="M15 27 q -1 9 1 16 q 1 7 -1 12" />
+        <path d="M21 27 q 1 9 -1 16 q -1 7 1 12" />
+        <path d="M26 26 q 2 8 -1 15 q -2 6 1 13" />
+      </g>
+      <g className="jelly-bell">
+        <path d="M5 20 Q5 5 18 5 Q31 5 31 20 Q31 23 29 25 Q26 22 23 25 Q20 22 18 25 Q15 22 12.5 25 Q9 22 7 25 Q5 23 5 20 Z" fill="#d39ce0" opacity="0.72" />
+        <path d="M10 9 Q14 6 19 8" stroke="#fbf1ff" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.7" />
+      </g>
     </svg>
   );
 }
@@ -203,6 +221,9 @@ function SeaLife() {
       <span className="sea fish f3"><Fish body="#f08a4a" tail="#e8743a" /></span>
       <span className="sea fish f4"><Fish body="#ef7d7d" tail="#d95a5a" /></span>
       <span className="octo"><Octopus /></span>
+      <span className="jelly j1"><Jellyfish /></span>
+      <span className="jelly j2"><Jellyfish /></span>
+      <span className="jelly j3"><Jellyfish /></span>
       <span className="weed w1"><svg viewBox="0 0 20 80" width="22" height="84"><path d="M10 80 C4 64 16 54 9 40 C3 28 15 18 9 2" fill="none" stroke="#2f7d3f" strokeWidth="5.5" strokeLinecap="round" /><path d="M9 44 C15 40 18 45 17 52" fill="none" stroke="#2f7d3f" strokeWidth="3.5" strokeLinecap="round" /></svg></span>
       <span className="weed w2"><svg viewBox="0 0 20 64" width="20" height="68"><path d="M10 64 C16 50 4 42 11 30 C16 20 6 12 11 2" fill="none" stroke="#368a46" strokeWidth="5" strokeLinecap="round" /></svg></span>
       <span className="weed w3"><svg viewBox="0 0 20 90" width="22" height="94"><path d="M10 90 C3 72 17 60 9 44 C2 30 16 20 10 2" fill="none" stroke="#2a7038" strokeWidth="6" strokeLinecap="round" /><path d="M10 50 C3 46 1 52 3 58" fill="none" stroke="#2a7038" strokeWidth="3.5" strokeLinecap="round" /></svg></span>
