@@ -536,8 +536,8 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
 .climb-game {
   position: relative;
   width: 100%;
-  height: calc(100vh - 52px); /* fallback for browsers without dvh */
-  height: calc(100dvh - 52px); /* dvh = the actual visible height on mobile (no 100vh overshoot) */
+  height: calc(100vh - 108px); /* fallback for browsers without dvh */
+  height: calc(100dvh - 108px); /* dvh = the actual visible height on mobile (no 100vh overshoot) */
   display: flex;
   flex-direction: column;
   overflow: hidden;
