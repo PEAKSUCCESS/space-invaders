@@ -11,8 +11,50 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..800&family=Montserrat:wght@400;500;600;700&display=swap"
     />
     <title>Survival</title>
+    <style>
+      /* Paint the cream background AND the PeakESL header on the first frame —
+         the header is part of the static shell (below) so it never flashes in. */
+      html, body { background: #FDFAF2; }
+      .peak-header-root { height: 56px; }
+      .peak-header {
+        position: fixed; top: 0; left: 0; width: 100%; height: 56px; z-index: 60;
+        box-sizing: border-box; background: #4a4f6d; display: flex; align-items: center;
+        gap: 40px; padding: 12px; color: #fff;
+        font-family: 'DM Sans', 'Montserrat', system-ui, -apple-system, sans-serif;
+      }
+      .peak-header-logo { display: block; width: 117px; height: auto; flex-shrink: 0; }
+      .peak-header-nav { display: flex; align-items: center; width: 100%; }
+      .peak-header-links, .peak-header-right { display: flex; align-items: center; gap: 32px; margin: 0; padding: 0; list-style: none; }
+      .peak-header-right { margin-left: auto; flex-shrink: 0; }
+      .peak-header-item { white-space: nowrap; }
+      .peak-header-link, .peak-header-name { font-size: 14px; font-weight: 800; color: #fff; cursor: default; text-decoration: none; }
+      a.peak-header-link.is-clickable { cursor: pointer; }
+    </style>
   </head>
   <body>
+    <!-- Static PeakESL header: part of the shell so it paints on the first frame
+         and never flashes. The app renders into #root below it. -->
+    <div class="peak-header-root">
+      <header class="peak-header">
+        <img class="peak-header-logo" src="/peak_logo.png" alt="Peak ESL logo" />
+        <nav class="peak-header-nav">
+          <ul class="peak-header-links">
+            <li class="peak-header-item"><a class="peak-header-link is-clickable" href="https://app.peakesl.com" onclick="if (history.length > 2) { history.go(-2); return false; }">Home</a></li>
+            <li class="peak-header-item"><a class="peak-header-link is-clickable" onclick="history.back(); return false;">Vocab</a></li>
+          </ul>
+          <ul class="peak-header-right">
+            <li class="peak-header-item"><span class="peak-header-name" id="peak-header-name"></span></li>
+          </ul>
+        </nav>
+      </header>
+    </div>
+    <script>
+      (function () {
+        var p = new URLSearchParams(location.search);
+        var n = (p.get('shopperName') || p.get('userName') || p.get('name') || '').trim();
+        if (n) document.getElementById('peak-header-name').textContent = n;
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
