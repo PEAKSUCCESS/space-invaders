@@ -19,6 +19,19 @@ const SUPPORTED_LANGUAGES: LanguageCode[] = [
   'en', 'ja', 'ko', 'zh', 'es', 'pt', 'fr', 'tl', 'ro', 'hi', 'id', 'th', 'vi', 'ur',
 ];
 
+/** Map a launch `level=` value onto our easy/medium/hard enum, or undefined if
+ * unrecognized. The hub/PeakESL platform speaks beginner/medium/advanced (and
+ * may capitalize, e.g. "Beginner"); without this mapping a `level=beginner`
+ * launch silently falls through to a stale saved difficulty (e.g. a previous
+ * "hard" run) instead of honoring the requested level. */
+function normalizeLevel(raw: string | null): Difficulty | undefined {
+  const v = raw?.trim().toLowerCase();
+  if (v === 'beginner' || v === 'easy') return 'easy';
+  if (v === 'medium') return 'medium';
+  if (v === 'advanced' || v === 'hard') return 'hard';
+  return undefined;
+}
+
 export function parseLaunchParams(search: string): LaunchParams {
   const params = new URLSearchParams(search);
   const out: LaunchParams = {};
@@ -60,8 +73,8 @@ export function parseLaunchParams(search: string): LaunchParams {
   if (rawEmail?.trim()) out.userEmail = rawEmail.trim();
 
   // From the landing hub: pre-selected start settings + skip-landing flag.
-  const rawLevel = params.get('level');
-  if (rawLevel === 'easy' || rawLevel === 'medium' || rawLevel === 'hard') out.difficulty = rawLevel;
+  const level = normalizeLevel(params.get('level'));
+  if (level) out.difficulty = level;
 
   const rawAreas = params.get('areas');
   if (rawAreas) out.areas = rawAreas.split(',').map((s) => s.trim()).filter(Boolean);
