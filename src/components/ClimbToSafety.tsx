@@ -171,26 +171,31 @@ function SeaLife() {
         </svg>
       </span>
       <span className="sea shark">
-        <svg viewBox="0 0 64 28" width="74" height="32">
+        {/* viewBox opened above the body so the dorsal fin has headroom */}
+        <svg viewBox="0 -10 64 40" width="82" height="51">
           {/* body */}
           <path d="M61 14 Q44 7 26 11 L5 5 Q10 14 5 23 L26 17 Q44 21 61 14 Z" fill="#90a7b5" />
-          {/* tall swept-back dorsal fin */}
-          <path d="M23 10 L41 9 L26 0 Z" fill="#7d94a2" />
+          {/* big swept-back dorsal fin */}
+          <path d="M24 9 L41 8 L26 -8 Z" fill="#7d94a2" />
           {/* pectoral fin (underside) */}
-          <path d="M28 17 L24 23 L34 18 Z" fill="#7d94a2" />
-          {/* mouth line + a row of teeth along the snout */}
-          <path d="M46 15.4 Q53 17.2 60 14.6" stroke="#33444d" strokeWidth="1.2" fill="none" />
-          <g fill="#fdfdfd">
-            <path d="M47 15.4 l1.8 0 -0.9 2.7 Z" />
-            <path d="M50 15.3 l1.8 0 -0.9 2.7 Z" />
-            <path d="M53 15.1 l1.8 0 -0.9 2.6 Z" />
-            <path d="M56 15 l1.7 0 -0.85 2.4 Z" />
-            <path d="M58.4 14.9 l1.5 0 -0.75 2.2 Z" />
+          <path d="M30 17 L26 24 L37 18 Z" fill="#7d94a2" />
+          {/* open, toothy mouth: dark gap + upper & lower rows of teeth */}
+          <path d="M46 14.5 Q53 15 61 14 L60 18.5 Q53 20.5 47 18 Z" fill="#2b3a42" />
+          <g fill="#ffffff">
+            <path d="M47.5 14.8 l2.3 0 -1.15 3 Z" />
+            <path d="M51 14.9 l2.3 0 -1.15 3 Z" />
+            <path d="M54.5 14.7 l2.3 0 -1.15 2.9 Z" />
+            <path d="M57.8 14.4 l2.1 0 -1.05 2.6 Z" />
+          </g>
+          <g fill="#f1f5f7">
+            <path d="M48.5 18.2 l2.1 0 -1.05 -2.6 Z" />
+            <path d="M52 18.4 l2.1 0 -1.05 -2.6 Z" />
+            <path d="M55.5 18.1 l2 0 -1 -2.4 Z" />
           </g>
           {/* eye */}
-          <circle cx="52" cy="13" r="1.3" fill="#10212c" />
+          <circle cx="51" cy="11.5" r="1.4" fill="#10212c" />
           {/* gills */}
-          <g stroke="#7d94a2" strokeWidth="1"><line x1="46" y1="10" x2="45" y2="17" /><line x1="49" y1="10" x2="48" y2="17" /></g>
+          <g stroke="#7d94a2" strokeWidth="1"><line x1="41" y1="9" x2="40" y2="16" /><line x1="44" y1="9" x2="43" y2="16" /></g>
         </svg>
       </span>
       <span className="sea fish f1"><Fish body="#f59c3f" tail="#ef8a3a" /></span>

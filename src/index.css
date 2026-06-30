@@ -695,19 +695,27 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
    the current waterline; the arc + nose-up→nose-down rotation are keyframed,
    and it's hidden (opacity 0) while submerged between leaps. */
 .climb-dolphin { position: absolute; left: 12%; bottom: 100%; width: 72px; z-index: 4; pointer-events: none; }
+/* The leap is a sampled parabola driven at `linear` speed (so no easing "stall"
+   at the apex), with the rotation tracking the trajectory tangent: nose-up on
+   exit (−25°) sweeping continuously to nose-down on entry (+105°), and a
+   horizontal drift so it arcs across rather than bouncing in place. The SVG's
+   nose points up-right at rotate(0), hence the −25°→+105° range. */
 .dolphin-svg {
   display: block; width: 100%; height: auto;
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.18));
-  animation: dolphin-jump 12s ease-in-out infinite;
+  animation: dolphin-jump 11s linear infinite;
 }
 @keyframes dolphin-jump {
-  0%, 60%   { transform: translateY(72%)   rotate(-32deg); opacity: 0; }
-  64%       { transform: translateY(18%)   rotate(-28deg); opacity: 1; }
-  72%       { transform: translateY(-78%)  rotate(-8deg);  opacity: 1; }
-  79%       { transform: translateY(-118%) rotate(10deg);  opacity: 1; }
-  86%       { transform: translateY(-72%)  rotate(28deg);  opacity: 1; }
-  93%       { transform: translateY(18%)   rotate(36deg);  opacity: 1; }
-  96%, 100% { transform: translateY(72%)   rotate(-32deg); opacity: 0; }
+  /* submerged & hidden between leaps */
+  0%, 62%   { transform: translate(-55%, 35%)  rotate(-25deg); opacity: 0; }
+  64%       { transform: translate(-49%, 14%)  rotate(-19deg); opacity: 1; }  /* breaches, nose-up */
+  66.8%     { transform: translate(-38%, -44%) rotate(-5deg);  opacity: 1; }
+  71.6%     { transform: translate(-22%, -95%) rotate(14deg);  opacity: 1; }
+  78%       { transform: translate(0%,  -120%) rotate(40deg);  opacity: 1; }  /* apex, arcing over */
+  84.4%     { transform: translate(22%, -95%)  rotate(66deg);  opacity: 1; }
+  89.2%     { transform: translate(38%, -44%)  rotate(86deg);  opacity: 1; }
+  94%       { transform: translate(55%, 35%)   rotate(105deg); opacity: 0; }  /* re-enters nose-first */
+  100%      { transform: translate(-55%, 35%)  rotate(-25deg); opacity: 0; }
 }
 
 /* Countdown dial — winds down toward the leader/par time, top-right of the scene. */
