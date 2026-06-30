@@ -68,7 +68,8 @@ export interface Profile {
   userId: number;
   difficulty: Difficulty;   // maps to the API `level`
   areas: AreaCode[];        // [] = all areas
-  language: LanguageCode;   // native language; sent on enroll
+  nativeLanguage: LanguageCode; // vocab CONTENT (sent on enroll)
+  language: LanguageCode;   // UI/DISPLAY (all t())
   avatarId: AvatarId;
   audio: boolean;
   picsOnly?: boolean;       // stage-only: build an image-only lesson for picture review

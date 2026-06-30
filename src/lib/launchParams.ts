@@ -3,6 +3,7 @@ import { avatars } from '../data/avatars';
 
 export interface LaunchParams {
   userId?: number;
+  nativeLanguage?: LanguageCode;
   language?: LanguageCode;
   avatarId?: AvatarId;
   userName?: string;   // PLP shopper identity — used to attribute feedback
@@ -48,14 +49,16 @@ export function parseLaunchParams(search: string): LaunchParams {
     if (Number.isFinite(n) && n > 0) out.userId = Math.trunc(n);
   }
 
-  // PLP sends the shopper's native language as ?nativeLanguage=; older callers used ?language=.
-  const rawLang = params.get('nativeLanguage') ?? params.get('language');
-  if (rawLang) {
-    const lang = rawLang.toLowerCase();
-    if (SUPPORTED_LANGUAGES.includes(lang)) {
-      out.language = lang;
-    }
-  }
+  // nativeLanguage → vocab content; language → UI/display. Cross-fall back so a
+  // legacy single-param caller still works.
+  const norm = (raw: string | null): LanguageCode | undefined => {
+    const l = raw?.toLowerCase();
+    return l && SUPPORTED_LANGUAGES.includes(l) ? l : undefined;
+  };
+  const native = norm(params.get('nativeLanguage')) ?? norm(params.get('language'));
+  const display = norm(params.get('language')) ?? native;
+  if (native) out.nativeLanguage = native;
+  if (display) out.language = display;
 
   const rawAvatar = params.get('avatar');
   if (rawAvatar) {

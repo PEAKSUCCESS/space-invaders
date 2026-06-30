@@ -16,6 +16,7 @@ interface LegacySave {
   difficulty?: SaveState['difficulty'];
   areaCode?: AreaCode;            // old single-area schema
   areas?: AreaCode[];
+  nativeLanguage?: SaveState['nativeLanguage'];
   language?: SaveState['language'];
   avatarId?: SaveState['avatarId'];
   audio?: boolean;
@@ -36,7 +37,8 @@ export function loadSave(): SaveState | null {
       difficulty: p.difficulty,
       // Migrate the old single areaCode → multi-area; default [] = all areas.
       areas: p.areas ?? [],
-      language: p.language,
+      nativeLanguage: p.nativeLanguage ?? p.language!,
+      language: p.language!,
       avatarId: p.avatarId ?? 'Ivy',
       audio: p.audio ?? true,
       lessonsCompleted: p.lessonsCompleted ?? p.lessonCount ?? 0,

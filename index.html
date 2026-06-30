@@ -56,7 +56,7 @@
         // Native-language header labels (mirrors ui_strings; es only today). English
         // stays the default in the markup, so untranslated languages don't flash.
         var T = { es: { home: 'Inicio', vocab: 'Vocabulario' } };
-        var tr = T[(p.get('nativeLanguage') || p.get('language') || '').toLowerCase()];
+        var tr = T[(p.get('language') || p.get('nativeLanguage') || '').toLowerCase()];
         if (tr) {
           var h = document.getElementById('peak-header-home'); if (h) h.textContent = tr.home;
           var v = document.getElementById('peak-header-vocab'); if (v) v.textContent = tr.vocab;

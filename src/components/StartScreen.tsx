@@ -36,6 +36,7 @@ export function StartScreen({ initial, lessonsCompleted, progress, onProgress, o
   const userId = initial?.userId ?? 0;
   const [difficulty, setDifficulty] = useState<Difficulty>(initial?.difficulty ?? 'easy');
   const [areas, setAreas] = useState<AreaCode[]>(initial?.areas ?? []);
+  const [nativeLanguage] = useState<LanguageCode | undefined>(initial?.nativeLanguage);
   const [language] = useState<LanguageCode | undefined>(initial?.language);
   const [avatarId] = useState<AvatarId | undefined>(initial?.avatarId ?? avatars[0].id);
   const [audio, setAudio] = useState<boolean>(initial?.audio ?? true);
@@ -108,7 +109,7 @@ export function StartScreen({ initial, lessonsCompleted, progress, onProgress, o
   }, [userId, areas, lessonsCompleted, enrolled, onProgress]);
 
   const currentAvatar = avatarById(avatarId ?? avatars[0].id);
-  const ready = userId > 0 && !!language && !!avatarId;
+  const ready = userId > 0 && !!nativeLanguage && !!avatarId;
 
   const selectedIndex = Math.max(0, LEVELS.findIndex((l) => l.id === difficulty));
   const goPrev = () => selectedIndex > 0 && setDifficulty(LEVELS[selectedIndex - 1].id);
@@ -150,7 +151,7 @@ export function StartScreen({ initial, lessonsCompleted, progress, onProgress, o
         <div className="speech-bubble">{t('app.welcome')}</div>
       </div>
 
-      {userId > 0 && <StreakBuckets userId={userId} language={language} />}
+      {userId > 0 && <StreakBuckets userId={userId} language={nativeLanguage} />}
 
       <Section title={t('start.yourProgress')}>
         <div className="journey">
@@ -247,7 +248,7 @@ export function StartScreen({ initial, lessonsCompleted, progress, onProgress, o
           if (!ready || starting) return;
           setStarting(true);
           try {
-            await onStart({ userId, difficulty, areas, language: language!, avatarId: avatarId!, audio, picsOnly: PICS_ONLY_ENABLED && picsOnly });
+            await onStart({ userId, difficulty, areas, nativeLanguage: nativeLanguage!, language: language ?? nativeLanguage!, avatarId: avatarId!, audio, picsOnly: PICS_ONLY_ENABLED && picsOnly });
           } finally {
             // On success App unmounts this screen; on error it stays, so re-enable.
             setStarting(false);

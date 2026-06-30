@@ -111,7 +111,7 @@ function buildRounds(pool: ApiWord[], language: string): ClimbRound[] {
 }
 
 export async function buildLesson(profile: Profile, lessonsCompleted: number): Promise<Lesson> {
-  const { userId, language, avatarId, difficulty, areas } = profile;
+  const { userId, nativeLanguage, avatarId, difficulty, areas } = profile;
 
   // Stage-only "PICS ONLY" review mode: image-prompt climb rounds drawn from
   // EVERY pictured word in the corpus — across all areas and difficulty levels,
@@ -133,14 +133,14 @@ export async function buildLesson(profile: Profile, lessonsCompleted: number): P
       number: lessonsCompleted + 1,
       steps: [{ kind: 'climb', rounds }],
       bin: pics,
-      debug: { lang: language, binCount: pics.length, translatedCount: 0, imageCount: pics.length },
+      debug: { lang: nativeLanguage, binCount: pics.length, translatedCount: 0, imageCount: pics.length },
     };
   }
 
   // Ensure the user exists, then apply the current level + area selections.
   // setLevel then setAreas each bench+refill the bin (progress preserved); the
   // setAreas response carries the resulting bin we build the lesson from.
-  await enrollUser({ userId, nativeLanguage: language, avatar: avatarId, level: difficulty, areas });
+  await enrollUser({ userId, nativeLanguage, avatar: avatarId, level: difficulty, areas });
   await setLevel(userId, difficulty);
   const binResp = await setAreas(userId, areas);
   const bin = binResp.words ?? [];
@@ -152,9 +152,9 @@ export async function buildLesson(profile: Profile, lessonsCompleted: number): P
   // A word is playable as a climb round when we can show a prompt for it: its
   // native translation (word prompt) or its picture (image prompt). The handholds
   // themselves are English words drawn from the whole bin.
-  const translated = bin.filter((w) => hasNative(w, language));
+  const translated = bin.filter((w) => hasNative(w, nativeLanguage));
   const imageWords = bin.filter(hasImage);
-  const playable = bin.filter((w) => hasNative(w, language) || hasImage(w));
+  const playable = bin.filter((w) => hasNative(w, nativeLanguage) || hasImage(w));
 
   if (playable.length === 0) {
     throw new Error(
@@ -164,10 +164,10 @@ export async function buildLesson(profile: Profile, lessonsCompleted: number): P
 
   return {
     number: lessonsCompleted + 1,
-    steps: [{ kind: 'climb', rounds: buildRounds(playable, language) }],
+    steps: [{ kind: 'climb', rounds: buildRounds(playable, nativeLanguage) }],
     bin,
     debug: {
-      lang: language,
+      lang: nativeLanguage,
       binCount: bin.length,
       translatedCount: translated.length,
       imageCount: imageWords.length,

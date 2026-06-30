@@ -19,7 +19,7 @@ import { CHALLENGES_HUB_URL } from './lib/env';
 import { t } from './i18n/i18n';
 
 function profileFromSave(s: SaveState): Profile {
-  return { userId: s.userId, difficulty: s.difficulty, areas: s.areas, language: s.language, avatarId: s.avatarId, audio: s.audio };
+  return { userId: s.userId, difficulty: s.difficulty, areas: s.areas, nativeLanguage: s.nativeLanguage, language: s.language, avatarId: s.avatarId, audio: s.audio };
 }
 
 function App() {
@@ -84,6 +84,7 @@ function App() {
       userId: launchParams.userId!,
       difficulty: launchParams.difficulty ?? 'easy',
       areas: launchParams.areas ?? [],
+      nativeLanguage: launchParams.nativeLanguage!,
       language: launchParams.language!,
       avatarId: launchParams.avatarId!,
       audio: launchParams.audio ?? true,
@@ -297,7 +298,7 @@ function App() {
       word: feedbackCtx.word,
       pictureUrl: feedbackCtx.pictureUrl,
       sentence: feedbackCtx.sentence,
-      language: profile.language,
+      language: profile.nativeLanguage,
       level: profile.difficulty,
       message,
     });
@@ -327,7 +328,7 @@ function App() {
           key={stepKey}
           rounds={step.rounds}
           pool={lesson.bin}
-          language={profile.language}
+          language={profile.nativeLanguage}
           avatarId={profile.avatarId}
           audio={profile.audio}
           paused={feedbackOpen}
@@ -345,7 +346,7 @@ function App() {
         <MatchingTiles
           key={stepKey}
           words={step.targets}
-          language={profile.language}
+          language={profile.nativeLanguage}
           avatarId={profile.avatarId}
           audio={profile.audio}
           onAnswer={handleAnswer}
@@ -359,7 +360,7 @@ function App() {
           mode={step.pickMode}
           target={step.target}
           pool={lesson.bin}
-          language={profile.language}
+          language={profile.nativeLanguage}
           avatarId={profile.avatarId}
           audio={profile.audio}
           onAnswer={handleAnswer}
@@ -383,7 +384,7 @@ function App() {
           version={step.version}
           sentence={step.sentence}
           distractors={lesson.bin}
-          language={profile.language}
+          language={profile.nativeLanguage}
           avatarId={profile.avatarId}
           onComplete={onChallengeComplete}
         />
