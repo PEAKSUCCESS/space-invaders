@@ -98,20 +98,23 @@ function Fish({ body, tail }: { body: string; tail: string }) {
   );
 }
 
-// A seagull in natural overhead flight — a symmetric "M" silhouette (head lump
-// + two up-swept wings with drooping tips) so it reads as a bird flying toward
-// you, not a side-on shape. Dark grey-blue for contrast on the pale sky; the
-// wings flap (each wing group rotates about the body via CSS).
+// A seagull in side profile facing the way it flies (head + beak forward, tail
+// back, one flapping wing) — so its orientation matches its horizontal travel.
+// White body with grey wing/tail and a slate outline for contrast on the sky;
+// leftward gulls are flipped via CSS. The wing flaps about its base.
 function Seagull() {
   return (
-    <svg viewBox="0 0 48 20" className="gull-svg" aria-hidden="true">
-      <ellipse cx="24" cy="9" rx="3.1" ry="2.5" fill="#4e5e6a" />
-      <g className="gull-wing gull-l">
-        <path d="M24 8.6 Q15 0.5 3 10.5" fill="none" stroke="#4e5e6a" strokeWidth="3.3" strokeLinecap="round" />
-      </g>
-      <g className="gull-wing gull-r">
-        <path d="M24 8.6 Q33 0.5 45 10.5" fill="none" stroke="#4e5e6a" strokeWidth="3.3" strokeLinecap="round" />
-      </g>
+    <svg viewBox="0 0 52 32" className="gull-svg" aria-hidden="true">
+      {/* tail (back), slightly forked */}
+      <path d="M11 21 L2 18.5 L5 21 L1.5 23.5 L11 23 Z" fill="#9aa9b4" stroke="#52616c" strokeWidth="0.9" strokeLinejoin="round" />
+      {/* body + head */}
+      <path d="M8 22 Q5.5 20 9.5 19 L20 18 Q31 17.4 40 19.4 Q45 20.4 45 22 Q43 24 39 24 Q28 24.8 18 24 Q11.5 24 8 22 Z" fill="#fdfeff" stroke="#52616c" strokeWidth="1.1" strokeLinejoin="round" />
+      {/* beak (points in the direction of travel) */}
+      <path d="M44.5 20.4 l5.2 0.9 -4.8 1.9 Z" fill="#f2a13a" stroke="#cf8526" strokeWidth="0.5" strokeLinejoin="round" />
+      {/* eye */}
+      <circle cx="42" cy="20.6" r="0.95" fill="#27323a" />
+      {/* flapping wing */}
+      <path className="gull-wing" d="M26 20.2 Q19 7 7 8.5 Q17 14.5 24 21 Z" fill="#9aa9b4" stroke="#52616c" strokeWidth="1" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -220,6 +223,8 @@ function SeaLife() {
       <span className="sea fish f2"><Fish body="#f0cf4d" tail="#e7c13a" /></span>
       <span className="sea fish f3"><Fish body="#f08a4a" tail="#e8743a" /></span>
       <span className="sea fish f4"><Fish body="#ef7d7d" tail="#d95a5a" /></span>
+      <span className="sea fish f5"><Fish body="#6fc6c0" tail="#54b3ad" /></span>
+      <span className="sea fish f6"><Fish body="#f6b24a" tail="#e89a33" /></span>
       <span className="octo"><Octopus /></span>
       <span className="jelly j1"><Jellyfish /></span>
       <span className="jelly j2"><Jellyfish /></span>
