@@ -39,8 +39,8 @@
         <img class="peak-header-logo" src="/peak_logo.png" alt="Peak ESL logo" />
         <nav class="peak-header-nav">
           <ul class="peak-header-links">
-            <li class="peak-header-item"><a class="peak-header-link is-clickable" href="https://app.peakesl.com" onclick="if (history.length > 2) { history.go(-2); return false; }">Home</a></li>
-            <li class="peak-header-item"><a class="peak-header-link is-clickable" onclick="history.back(); return false;">Vocab</a></li>
+            <li class="peak-header-item"><a id="peak-header-home" class="peak-header-link is-clickable" href="https://app.peakesl.com" onclick="if (history.length > 2) { history.go(-2); return false; }">Home</a></li>
+            <li class="peak-header-item"><a id="peak-header-vocab" class="peak-header-link is-clickable" onclick="history.back(); return false;">Vocabulary</a></li>
           </ul>
           <ul class="peak-header-right">
             <li class="peak-header-item"><span class="peak-header-name" id="peak-header-name"></span></li>
@@ -53,6 +53,14 @@
         var p = new URLSearchParams(location.search);
         var n = (p.get('shopperName') || p.get('userName') || p.get('name') || '').trim();
         if (n) document.getElementById('peak-header-name').textContent = n;
+        // Native-language header labels (mirrors ui_strings; es only today). English
+        // stays the default in the markup, so untranslated languages don't flash.
+        var T = { es: { home: 'Inicio', vocab: 'Vocabulario' } };
+        var tr = T[(p.get('nativeLanguage') || p.get('language') || '').toLowerCase()];
+        if (tr) {
+          var h = document.getElementById('peak-header-home'); if (h) h.textContent = tr.home;
+          var v = document.getElementById('peak-header-vocab'); if (v) v.textContent = tr.vocab;
+        }
       })();
     </script>
     <div id="root"></div>
