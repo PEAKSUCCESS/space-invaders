@@ -98,6 +98,66 @@ function Fish({ body, tail }: { body: string; tail: string }) {
   );
 }
 
+// A gliding seagull — white body, grey-tipped wings that flap (each wing group
+// rotates about the body via CSS). Flies across the sky band above the water.
+function Seagull() {
+  return (
+    <svg viewBox="0 0 48 24" className="gull-svg" aria-hidden="true">
+      <g className="gull-wing gull-l">
+        <path d="M24 13 Q14 3 3 8 Q13 9 24 14 Z" fill="#fbfdfe" stroke="#aebcc7" strokeWidth="0.9" />
+        <path d="M5 7.6 Q3.2 7 3 8 Q5 8.6 7.2 9 Z" fill="#5d6b76" />
+      </g>
+      <g className="gull-wing gull-r">
+        <path d="M24 13 Q34 3 45 8 Q35 9 24 14 Z" fill="#fbfdfe" stroke="#aebcc7" strokeWidth="0.9" />
+        <path d="M43 7.6 Q44.8 7 45 8 Q43 8.6 40.8 9 Z" fill="#5d6b76" />
+      </g>
+      <ellipse cx="24" cy="13.5" rx="3" ry="2.2" fill="#f4f8fb" />
+      <path d="M26.5 13.2 l3 -0.3 -2.7 1.7 Z" fill="#f0a23a" />
+    </svg>
+  );
+}
+
+// A leaping dolphin (nose up-right) — body, belly highlight, dorsal + pectoral
+// fins and tail flukes. The arc + nose-up→nose-down rotation come from CSS.
+function Dolphin() {
+  return (
+    <svg viewBox="0 0 96 80" className="dolphin-svg" aria-hidden="true">
+      <path d="M18 58 Q3 52 7 64 Q12 57 19 60 Z" fill="#5a83a3" />
+      <path d="M40 46 Q31 57 25 53 Q35 47 40 46 Z" fill="#5a83a3" />
+      <path d="M18 58 C 20 32 40 12 78 8 C 67 19 59 30 54 42 C 49 52 38 58 18 58 Z" fill="#6a93b0" />
+      <path d="M26 53 C 30 35 46 19 70 12 C 61 22 55 32 50 43 C 46 50 37 55 26 53 Z" fill="#d4e6f0" opacity="0.75" />
+      <path d="M44 19 Q50 5 59 15 Q50 16 47 24 Z" fill="#5a83a3" />
+      <circle cx="68" cy="17" r="1.9" fill="#1b2a33" />
+    </svg>
+  );
+}
+
+// A cute octopus resting on the seafloor — domed mantle, two big eyes, and a
+// fan of eight arms that sway gently (the arm group skews via CSS).
+function Octopus() {
+  return (
+    <svg viewBox="0 0 64 64" className="octo-svg" aria-hidden="true">
+      <g className="octo-arms" stroke="#bf4a7e" strokeWidth="5" strokeLinecap="round" fill="none">
+        <path d="M14 37 Q4 47 8 59" />
+        <path d="M19 41 Q12 51 15 62" />
+        <path d="M25 43 Q21 54 24 63" />
+        <path d="M31 44 Q30 56 32 64" />
+        <path d="M37 43 Q40 54 38 63" />
+        <path d="M43 43 Q47 54 43 63" />
+        <path d="M49 41 Q56 51 52 62" />
+        <path d="M53 37 Q62 47 58 59" />
+      </g>
+      <path d="M12 30 Q12 7 33 7 Q54 7 54 30 Q54 40 46 44 L20 44 Q12 40 12 30 Z" fill="#d2568a" />
+      <ellipse cx="26" cy="27" rx="5.2" ry="6.2" fill="#fff" />
+      <ellipse cx="40" cy="27" rx="5.2" ry="6.2" fill="#fff" />
+      <circle cx="27" cy="28.5" r="2.6" fill="#33122b" />
+      <circle cx="41" cy="28.5" r="2.6" fill="#33122b" />
+      <ellipse cx="20" cy="35" rx="3" ry="2" fill="#e98bb0" opacity="0.7" />
+      <ellipse cx="46" cy="35" rx="3" ry="2" fill="#e98bb0" opacity="0.7" />
+    </svg>
+  );
+}
+
 // Decorative marine life drifting in the water — a whale, a shark, fish, and
 // swaying seaweed. Clipped to the water body, so they surface as the water rises.
 function SeaLife() {
@@ -112,10 +172,24 @@ function SeaLife() {
       </span>
       <span className="sea shark">
         <svg viewBox="0 0 64 28" width="74" height="32">
+          {/* body */}
           <path d="M61 14 Q44 7 26 11 L5 5 Q10 14 5 23 L26 17 Q44 21 61 14 Z" fill="#90a7b5" />
-          <path d="M30 9 L26 1 L20 10 Z" fill="#7d94a2" />
+          {/* tall swept-back dorsal fin */}
+          <path d="M23 10 L41 9 L26 0 Z" fill="#7d94a2" />
+          {/* pectoral fin (underside) */}
           <path d="M28 17 L24 23 L34 18 Z" fill="#7d94a2" />
+          {/* mouth line + a row of teeth along the snout */}
+          <path d="M46 15.4 Q53 17.2 60 14.6" stroke="#33444d" strokeWidth="1.2" fill="none" />
+          <g fill="#fdfdfd">
+            <path d="M47 15.4 l1.8 0 -0.9 2.7 Z" />
+            <path d="M50 15.3 l1.8 0 -0.9 2.7 Z" />
+            <path d="M53 15.1 l1.8 0 -0.9 2.6 Z" />
+            <path d="M56 15 l1.7 0 -0.85 2.4 Z" />
+            <path d="M58.4 14.9 l1.5 0 -0.75 2.2 Z" />
+          </g>
+          {/* eye */}
           <circle cx="52" cy="13" r="1.3" fill="#10212c" />
+          {/* gills */}
           <g stroke="#7d94a2" strokeWidth="1"><line x1="46" y1="10" x2="45" y2="17" /><line x1="49" y1="10" x2="48" y2="17" /></g>
         </svg>
       </span>
@@ -123,6 +197,7 @@ function SeaLife() {
       <span className="sea fish f2"><Fish body="#f0cf4d" tail="#e7c13a" /></span>
       <span className="sea fish f3"><Fish body="#f08a4a" tail="#e8743a" /></span>
       <span className="sea fish f4"><Fish body="#ef7d7d" tail="#d95a5a" /></span>
+      <span className="octo"><Octopus /></span>
       <span className="weed w1"><svg viewBox="0 0 20 80" width="22" height="84"><path d="M10 80 C4 64 16 54 9 40 C3 28 15 18 9 2" fill="none" stroke="#2f7d3f" strokeWidth="5.5" strokeLinecap="round" /><path d="M9 44 C15 40 18 45 17 52" fill="none" stroke="#2f7d3f" strokeWidth="3.5" strokeLinecap="round" /></svg></span>
       <span className="weed w2"><svg viewBox="0 0 20 64" width="20" height="68"><path d="M10 64 C16 50 4 42 11 30 C16 20 6 12 11 2" fill="none" stroke="#368a46" strokeWidth="5" strokeLinecap="round" /></svg></span>
       <span className="weed w3"><svg viewBox="0 0 20 90" width="22" height="94"><path d="M10 90 C3 72 17 60 9 44 C2 30 16 20 10 2" fill="none" stroke="#2a7038" strokeWidth="6" strokeLinecap="round" /><path d="M10 50 C3 46 1 52 3 58" fill="none" stroke="#2a7038" strokeWidth="3.5" strokeLinecap="round" /></svg></span>
@@ -348,6 +423,13 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
 
       {/* The climb scene: ladder, hiker ascending, ever-rising water. */}
       <div className="climb-scene" ref={sceneRef}>
+        {/* Seagulls gliding across the sky, behind the climber and water. */}
+        <div className="climb-sky" aria-hidden="true">
+          <span className="gull g1"><Seagull /></span>
+          <span className="gull g2"><Seagull /></span>
+          <span className="gull g3"><Seagull /></span>
+        </div>
+
         <div className="climb-ladder" aria-hidden="true" />
 
         {typeof startTime === 'number' && typeof targetMs === 'number' && targetMs > 0 && (
@@ -366,6 +448,8 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
             <path d="M0 10 q 25 -10 50 0 t 50 0 t 50 0 t 50 0 V20 H0 Z" />
           </svg>
           <SeaLife />
+          {/* A dolphin that occasionally leaps from the (rising) water surface. */}
+          <div className="climb-dolphin" aria-hidden="true"><Dolphin /></div>
         </div>
 
         {gameOver && (
