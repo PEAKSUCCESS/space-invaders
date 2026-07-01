@@ -20,7 +20,7 @@ interface LegacySave {
   language?: SaveState['language'];
   avatarId?: SaveState['avatarId'];
   audio?: boolean;
-  userId?: number;
+  userId?: string;
   lessonCount?: number;          // old field name
   lessonsCompleted?: number;
   lastUpdated?: number;
@@ -33,7 +33,7 @@ export function loadSave(): SaveState | null {
     const p = JSON.parse(raw) as LegacySave;
     if (!p.difficulty || !p.language) return null; // too stale to use
     return {
-      userId: p.userId ?? 0,
+      userId: typeof p.userId === 'string' ? p.userId : '',
       difficulty: p.difficulty,
       // Migrate the old single areaCode → multi-area; default [] = all areas.
       areas: p.areas ?? [],

@@ -2,7 +2,7 @@ import type { AreaCode, AvatarId, Difficulty, LanguageCode } from '../types';
 import { avatars } from '../data/avatars';
 
 export interface LaunchParams {
-  userId?: number;
+  userId?: string;
   nativeLanguage?: LanguageCode;
   language?: LanguageCode;
   avatarId?: AvatarId;
@@ -37,17 +37,15 @@ export function parseLaunchParams(search: string): LaunchParams {
   const params = new URLSearchParams(search);
   const out: LaunchParams = {};
 
-  // PLP identifies the shopper by their numeric PeakESL id, sent as ?distID=.
-  // Accept a few aliases/casings; fall back to VITE_DEV_USER_ID for local dev.
+  // PLP identifies the shopper by their opaque CUID id, sent as ?userID=. The
+  // legacy numeric distID is no longer sent or accepted. Accept a few casings;
+  // fall back to VITE_DEV_USER_ID for local dev. The id is an opaque string —
+  // no Number() coercion.
   const rawUser =
-    params.get('distID') ?? params.get('distId') ?? params.get('distid') ??
-    params.get('userId') ?? params.get('userID') ?? params.get('user_id');
+    params.get('userID') ?? params.get('userId') ?? params.get('user_id');
   const devUser = import.meta.env.VITE_DEV_USER_ID as string | undefined;
-  const userStr = rawUser ?? devUser;
-  if (userStr) {
-    const n = Number(userStr);
-    if (Number.isFinite(n) && n > 0) out.userId = Math.trunc(n);
-  }
+  const userStr = (rawUser ?? devUser)?.trim();
+  if (userStr) out.userId = userStr;
 
   // nativeLanguage → vocab content; language → UI/display. Cross-fall back so a
   // legacy single-param caller still works.

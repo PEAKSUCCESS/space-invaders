@@ -73,7 +73,7 @@ function App() {
   // when we already have the identity PLP must supply (userId/language/avatar).
   const canAutostart =
     !!launchParams.autostart &&
-    !!launchParams.userId && launchParams.userId > 0 &&
+    !!launchParams.userId &&
     !!launchParams.language && !!launchParams.avatarId;
 
   const autoStarted = useRef(false);
@@ -245,7 +245,7 @@ function App() {
     const resumeMerged: Profile | null = savedProfile ? { ...savedProfile, ...launchParams } : null;
     return (
       <>
-        {resumeMerged && resumeMerged.userId > 0 && profile === null && (
+        {resumeMerged && !!resumeMerged.userId && profile === null && (
           <div className="resume-banner">
             <span>{t('resume.prompt')}</span>
             <button type="button" className="primary-btn small" onClick={() => startWith(resumeMerged)}>{t('resume.continue')}</button>

@@ -72,7 +72,7 @@ export interface AnswerResponse {
 // ── Endpoints ───────────────────────────────────────────────────────────────
 
 export interface EnrollOpts {
-  userId: number;
+  userId: string;
   nativeLanguage: LanguageCode;
   avatar?: AvatarId;            // capitalized internal id; lowercased on the wire
   level?: Difficulty;
@@ -90,11 +90,11 @@ export function enrollUser(opts: EnrollOpts): Promise<BinResponse> {
   });
 }
 
-export function getBin(userId: number): Promise<BinResponse> {
+export function getBin(userId: string): Promise<BinResponse> {
   return getJson<BinResponse>(`/api/app/users/${userId}/bin`);
 }
 
-export function getNext(userId: number): Promise<NextResponse> {
+export function getNext(userId: string): Promise<NextResponse> {
   return getJson<NextResponse>(`/api/app/users/${userId}/next`);
 }
 
@@ -102,7 +102,7 @@ export function getNext(userId: number): Promise<NextResponse> {
  *  including `completed` words that have left the 20-word bin. Powers the
  *  start-screen streak buckets (learning / mastering / mastered). Unlike
  *  `getBin`, this is the full history, not the active working set. */
-export async function getUserWords(userId: number): Promise<ApiWord[]> {
+export async function getUserWords(userId: string): Promise<ApiWord[]> {
   const body = await getJson<{ userId: string; count: number; words: ApiWord[] }>(
     `/api/app/users/${userId}/words`,
   );
@@ -110,27 +110,27 @@ export async function getUserWords(userId: number): Promise<ApiWord[]> {
 }
 
 export function submitAnswer(
-  userId: number,
+  userId: string,
   answer: { senseId: string; correct: boolean; mode: AnswerMode },
 ): Promise<AnswerResponse> {
   return postJson<AnswerResponse>(`/api/app/users/${userId}/answers`, answer);
 }
 
-export function completeWord(userId: number, senseId: string): Promise<AnswerResponse> {
+export function completeWord(userId: string, senseId: string): Promise<AnswerResponse> {
   return postJson<AnswerResponse>(`/api/app/users/${userId}/words/${senseId}/complete`, {});
 }
 
 /** Benches the current bin (keeps progress) and refills from the new level. */
-export function setLevel(userId: number, level: Difficulty): Promise<BinResponse> {
+export function setLevel(userId: string, level: Difficulty): Promise<BinResponse> {
   return postJson<BinResponse>(`/api/app/users/${userId}/level`, { level });
 }
 
 /** Benches the bin (keeps progress) and refills from the new areas. [] = all. */
-export function setAreas(userId: number, areas: AreaCode[]): Promise<BinResponse> {
+export function setAreas(userId: string, areas: AreaCode[]): Promise<BinResponse> {
   return postJson<BinResponse>(`/api/app/users/${userId}/areas`, { areas });
 }
 
-export function getProgress(userId: number, areas?: AreaCode[]): Promise<ProgressResponse> {
+export function getProgress(userId: string, areas?: AreaCode[]): Promise<ProgressResponse> {
   const q = areas && areas.length ? `?areas=${areas.join(',')}` : '';
   return getJson<ProgressResponse>(`/api/app/users/${userId}/progress${q}`);
 }
@@ -140,7 +140,7 @@ export function getProgress(userId: number, areas?: AreaCode[]): Promise<Progres
 // `feedback` table; picture/word/sentence are filled in where applicable so the
 // review tool can show what the feedback is about.
 export interface FeedbackInput {
-  userId: number;          // required — the API 400s without it
+  userId: string;          // required — the API 400s without it
   userName?: string;       // PLP shopper identity, to attribute the report
   userEmail?: string;
   challengeType: string;   // human label, e.g. "Pick the Word (image)"
@@ -165,7 +165,7 @@ export function submitFeedback(input: FeedbackInput): Promise<{ ok: boolean; id?
 // Only flawless runs (wrongCount === 0) are ranked; the response carries this
 // run's rank among all flawless runs for the same `app`.
 export interface SubmitTimeInput {
-  userId: number;       // required — attributes the run
+  userId: string;       // required — attributes the run
   app: string;          // which game: 'balloons' | 'survival' | …
   durationMs: number;   // total time to finish the game
   wrongCount: number;   // wrong/missed answers this run (0 = flawless)

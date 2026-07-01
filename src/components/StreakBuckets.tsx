@@ -64,7 +64,7 @@ function BookCard({ color, count }: { color: string; count: number }) {
 }
 
 interface Props {
-  userId: number;
+  userId: string;
   language?: LanguageCode;
 }
 
@@ -75,7 +75,7 @@ export function StreakBuckets({ userId, language }: Props) {
   // Full word history (incl. completed words that have left the bin). On any
   // error (e.g. the endpoint isn't deployed yet) we just render nothing.
   useEffect(() => {
-    if (userId <= 0) return;
+    if (!userId) return;
     let cancelled = false;
     getUserWords(userId)
       .then((ws) => !cancelled && setWords(ws))

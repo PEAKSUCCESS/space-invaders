@@ -8,7 +8,7 @@
 
 ## What it does
 
-The app is launched by **peak-launchpad (PLP)** with the shopper's identity in the URL: `?distID=<numeric>&nativeLanguage=es&avatar=ivy` (parsed in `src/lib/launchParams.ts`; the numeric PeakESL id is sent as **`distID`** — `userId`/`userID`/`user_id` accepted as aliases — and falls back to `VITE_DEV_USER_ID` for local dev). PLP also sends `token`/`shopperName`/`shopperEmail`/`callbackURL`/`mode`; `shopperName`/`shopperEmail` are used (→ `LaunchParams.userName`/`userEmail`, to attribute feedback) and **`callbackURL`** is the hub return URL — the app navigates back to it when a lesson is **completed or quit** (`returnToLanding` in `App.tsx`; falls back to the start screen when absent, and only http(s) URLs are accepted). `token`/`mode` are ignored. The shopper lands on the start screen (avatar header + speech bubble, **journey/progress bar**, **topic picker**, audio toggle). Level (Beginner/Intermediate/Advanced) and topics are picked here; `userId`, native language, and avatar come from PLP.
+The app is launched by **peak-launchpad (PLP)** with the shopper's identity in the URL: `?userID=<cuid>&nativeLanguage=es&avatar=ivy` (parsed in `src/lib/launchParams.ts`; the shopper id is an **opaque CUID string** sent as **`userID`** — `userId`/`user_id` casings also accepted — and falls back to `VITE_DEV_USER_ID` for local dev). The legacy numeric `distID` is no longer sent or accepted, and the id is never coerced to a number. PLP also sends `token`/`shopperName`/`shopperEmail`/`callbackURL`/`mode`; `shopperName`/`shopperEmail` are used (→ `LaunchParams.userName`/`userEmail`, to attribute feedback) and **`callbackURL`** is the hub return URL — the app navigates back to it when a lesson is **completed or quit** (`returnToLanding` in `App.tsx`; falls back to the start screen when absent, and only http(s) URLs are accepted). `token`/`mode` are ignored. The shopper lands on the start screen (avatar header + speech bubble, **journey/progress bar**, **topic picker**, audio toggle). Level (Beginner/Intermediate/Advanced) and topics are picked here; `userId`, native language, and avatar come from PLP.
 
 Everything is driven by the **new user-centric peakvocab-api** (see "Vocabulary source"). The API owns a per-user **20-word bin**, does **server-side streak scoring** (correct → streak +1; at streak 20 the word is `completed`, leaves the bin, a replacement is drawn; a wrong answer drops it a level), and reports **real per-level progress**. The app no longer builds lessons from a local word list — it reads the bin and submits answers.
 
@@ -93,7 +93,7 @@ Read-only GETs and authenticated POSTs against **peakvocab-api**. Default base U
 - Stage: `https://peakvocab-api-stage-vkkf2.ondigitalocean.app`
 - Local dev: `http://localhost:3001`
 
-**All API access lives in `src/lib/appApi.ts`.** A user is identified by their numeric PeakESL `userId`; every call operates only on that user's data.
+**All API access lives in `src/lib/appApi.ts`.** A user is identified by their opaque CUID `userId` (a string, never a number); every call operates only on that user's data.
 
 - Reads (no auth): `fetchAreas()` → `GET /api/vocab/areas` (the 9 topic codes), `getBin`, `getNext`, `getProgress(userId, areas?)`.
 - Writes (auth): `enrollUser`, `submitAnswer`, `completeWord`, `setLevel`, `setAreas`, `submitFeedback` — sent with `Authorization: Bearer <VITE_APP_TOKEN>`.

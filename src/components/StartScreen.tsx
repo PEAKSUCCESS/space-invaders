@@ -33,7 +33,7 @@ function capWidth(pct: number, hasNext: boolean): number {
 }
 
 export function StartScreen({ initial, lessonsCompleted, progress, onProgress, onStart }: Props) {
-  const userId = initial?.userId ?? 0;
+  const userId = initial?.userId ?? '';
   const [difficulty, setDifficulty] = useState<Difficulty>(initial?.difficulty ?? 'easy');
   const [areas, setAreas] = useState<AreaCode[]>(initial?.areas ?? []);
   const [nativeLanguage] = useState<LanguageCode | undefined>(initial?.nativeLanguage);
@@ -82,7 +82,7 @@ export function StartScreen({ initial, lessonsCompleted, progress, onProgress, o
   // above shows instantly; this corrects it. A new/unenrolled user 404s here,
   // so we keep the defaults. The shopper can still change either before Start.
   useEffect(() => {
-    if (userId <= 0) return;
+    if (!userId) return;
     let cancelled = false;
     getBin(userId)
       .then((b) => {
@@ -100,7 +100,7 @@ export function StartScreen({ initial, lessonsCompleted, progress, onProgress, o
   // Lifted to App, so on a refetch we keep the last value (animating to the new
   // one) rather than flashing 0; on error we leave the last value in place.
   useEffect(() => {
-    if (userId <= 0 || (lessonsCompleted <= 0 && !enrolled)) return;
+    if (!userId || (lessonsCompleted <= 0 && !enrolled)) return;
     let cancelled = false;
     getProgress(userId, areas)
       .then((p) => !cancelled && onProgress(p))
@@ -109,7 +109,7 @@ export function StartScreen({ initial, lessonsCompleted, progress, onProgress, o
   }, [userId, areas, lessonsCompleted, enrolled, onProgress]);
 
   const currentAvatar = avatarById(avatarId ?? avatars[0].id);
-  const ready = userId > 0 && !!nativeLanguage && !!avatarId;
+  const ready = !!userId && !!nativeLanguage && !!avatarId;
 
   const selectedIndex = Math.max(0, LEVELS.findIndex((l) => l.id === difficulty));
   const goPrev = () => selectedIndex > 0 && setDifficulty(LEVELS[selectedIndex - 1].id);
@@ -151,7 +151,7 @@ export function StartScreen({ initial, lessonsCompleted, progress, onProgress, o
         <div className="speech-bubble">{t('app.welcome')}</div>
       </div>
 
-      {userId > 0 && <StreakBuckets userId={userId} language={nativeLanguage} />}
+      {!!userId && <StreakBuckets userId={userId} language={nativeLanguage} />}
 
       <Section title={t('start.yourProgress')}>
         <div className="journey">
@@ -236,7 +236,7 @@ export function StartScreen({ initial, lessonsCompleted, progress, onProgress, o
         </label>
       </Section>
 
-      {userId <= 0 && (
+      {!userId && (
         <p className="muted">{t('start.missingUser')}</p>
       )}
 

@@ -65,7 +65,7 @@ export interface Sentence {
 }
 
 export interface Profile {
-  userId: number;
+  userId: string;           // opaque CUID
   difficulty: Difficulty;   // maps to the API `level`
   areas: AreaCode[];        // [] = all areas
   nativeLanguage: LanguageCode; // vocab CONTENT (sent on enroll)
