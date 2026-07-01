@@ -550,7 +550,7 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
 .climb-instruction { margin: 0; color: var(--muted); font-size: 14px; font-weight: 600; }
 
 /* The clue, at the very top. */
-.climb-clue { display: flex; justify-content: center; margin-top: 50px; padding: 2px 16px 6px; z-index: 6; }
+.climb-clue { display: flex; justify-content: center; margin-top: 25px; padding: 2px 16px 6px; z-index: 6; }
 .climb-clue-card {
   display: flex; align-items: center; justify-content: center;
   min-height: 60px; padding: 8px 28px;
@@ -761,7 +761,7 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
   .climb-hud { padding: 5px 12px 0; gap: 0; }
   .climb-ledge { font-size: 15px; }
   .climb-instruction { font-size: 12px; }
-  .climb-clue { margin-top: 48px; padding: 2px 12px 5px; }
+  .climb-clue { margin-top: 16px; padding: 2px 12px 5px; }
   .climb-clue-card { min-height: 44px; padding: 5px 22px; }
   .climb-clue-word { font-size: 27px; }
   .climb-clue-img { width: 72px; height: 72px; }
