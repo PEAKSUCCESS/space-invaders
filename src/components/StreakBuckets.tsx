@@ -6,9 +6,6 @@ import { WordInfo } from './WordInfo';
 import { t } from '../i18n/i18n';
 import type { StringKey } from '../i18n/strings';
 
-// The streak threshold a word completes at (matches the API's scoring engine).
-const COMPLETE_AT = 20;
-
 type BucketKey = 'learning' | 'mastering' | 'mastered';
 
 const BUCKETS: { key: BucketKey; titleKey: StringKey; color: string }[] = [
@@ -20,16 +17,16 @@ const BUCKETS: { key: BucketKey; titleKey: StringKey; color: string }[] = [
 // Each word lands in exactly one bucket. A `completed` word can carry ANY streak
 // (a manual-complete keeps the real streak as a shadow but reads completed, e.g.
 // streak 0), so key mastered on status OR streak — never streak alone.
-function bucketOf(w: ApiWord): BucketKey {
-  if (w.status === 'completed' || w.streak >= COMPLETE_AT) return 'mastered';
-  if (w.streak >= 10) return 'mastering';
+function bucketOfWith(w: ApiWord, mastered: number, completed: number): BucketKey {
+  if (w.status === 'completed' || w.streak >= completed) return 'mastered';
+  if (w.streak >= mastered) return 'mastering';
   return 'learning';
 }
 
 // Display streak, capped at the completion threshold (completed words show full).
-function displayStreak(w: ApiWord): number {
-  if (w.status === 'completed') return COMPLETE_AT;
-  return Math.min(COMPLETE_AT, w.streak);
+function displayStreakWith(w: ApiWord, completed: number): number {
+  if (w.status === 'completed') return completed;
+  return Math.min(completed, w.streak);
 }
 
 // The bucket itself: a 3D closed book seen from an angle — cream page edges on
@@ -66,9 +63,14 @@ function BookCard({ color, count }: { color: string; count: number }) {
 interface Props {
   userId: string;
   language?: LanguageCode;
+  thresholds: { mastered: number; completed: number };
 }
 
-export function StreakBuckets({ userId, language }: Props) {
+export function StreakBuckets({ userId, language, thresholds }: Props) {
+  const { mastered, completed } = thresholds;
+  const bucketOf = (w: ApiWord): BucketKey => bucketOfWith(w, mastered, completed);
+  const displayStreak = (w: ApiWord): number => displayStreakWith(w, completed);
+
   const [words, setWords] = useState<ApiWord[] | null>(null);
   const [open, setOpen] = useState<BucketKey | null>(null);
 
@@ -90,7 +92,8 @@ export function StreakBuckets({ userId, language }: Props) {
       g[key].sort((a, b) => displayStreak(b) - displayStreak(a) || a.english.localeCompare(b.english));
     }
     return g;
-  }, [words]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [words, mastered, completed]);
 
   // Nothing to show until the user has at least one word (keeps a fresh/unenrolled
   // user, or a missing endpoint, from rendering empty buckets).
@@ -126,7 +129,7 @@ export function StreakBuckets({ userId, language }: Props) {
                   {w.english}
                   <WordInfo definition={nativeDefinition(w, language)} label={w.english} />
                 </span>
-                <span className="streak-list-streak">{displayStreak(w)} / {COMPLETE_AT}</span>
+                <span className="streak-list-streak">{displayStreak(w)} / {completed}</span>
               </div>
             ))
           ) : (

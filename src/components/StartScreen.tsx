@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { AreaCode, AreaInfo, AvatarId, Difficulty, LanguageCode, Profile, ProgressResponse } from '../types';
 import { avatars, avatarById } from '../data/avatars';
 import { AvatarBadge } from './AvatarBadge';
-import { fetchAreas, getBin, getProgress } from '../lib/appApi';
+import { fetchAreas, getBin, getConfig, getProgress } from '../lib/appApi';
 import { StreakBuckets } from './StreakBuckets';
 import { PICS_ONLY_ENABLED } from '../lib/env';
 import { t } from '../i18n/i18n';
@@ -42,6 +42,10 @@ export function StartScreen({ initial, lessonsCompleted, progress, onProgress, o
   const [audio, setAudio] = useState<boolean>(initial?.audio ?? true);
   const [picsOnly, setPicsOnly] = useState(false); // stage-only review mode
   const [starting, setStarting] = useState(false);
+  // Engine thresholds (bucketing + streak cap) — fetched from the API so they
+  // track app_setting instead of drifting from a hardcoded 10/20. Defaults match
+  // today's live values, used until getConfig() resolves (or if it fails).
+  const [thresholds, setThresholds] = useState({ mastered: 10, completed: 20 });
 
   const [areaList, setAreaList] = useState<AreaInfo[] | null>(null);
   const [areaError, setAreaError] = useState<string | null>(null);
@@ -61,6 +65,15 @@ export function StartScreen({ initial, lessonsCompleted, progress, onProgress, o
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
+  }, []);
+
+  // Engine thresholds, once on mount (no auth). On any error we keep the defaults.
+  useEffect(() => {
+    let cancelled = false;
+    getConfig()
+      .then((c) => !cancelled && setThresholds({ mastered: c.thresholds.mastered, completed: c.thresholds.completed }))
+      .catch(() => { /* keep the 10/20 defaults */ });
+    return () => { cancelled = true; };
   }, []);
 
   // Area picker source (no auth). Pass the native language to get translated
@@ -151,7 +164,7 @@ export function StartScreen({ initial, lessonsCompleted, progress, onProgress, o
         <div className="speech-bubble">{t('app.welcome')}</div>
       </div>
 
-      {!!userId && <StreakBuckets userId={userId} language={nativeLanguage} />}
+      {!!userId && <StreakBuckets userId={userId} language={nativeLanguage} thresholds={thresholds} />}
 
       <Section title={t('start.yourProgress')}>
         <div className="journey">
