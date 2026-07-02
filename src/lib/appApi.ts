@@ -1,23 +1,40 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// VENDORED — canonical peakvocab-api client. DO NOT EDIT IN A REPO.
+// Source of truth: PeakVocab/shared/api-client/appApi.ts
+// Synced into each activity's src/lib/appApi.ts by `node sync.mjs`.
+// It's a SUPERSET: each activity imports the subset it needs (unused exports are
+// tree-shaken out of the bundle — a shared client legitimately carries them).
+// Per-app identity comes from VITE_APP_NAME so this file stays byte-identical.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import type {
   ApiWord,
+  AppConfig,
   AreaCode,
   AreaInfo,
+  AreaTotals,
   AnswerMode,
   AvatarId,
+  CorpusWord,
   Difficulty,
   LanguageCode,
   ProgressResponse,
   Sentence,
-} from '../types';
+} from './apiTypes';
 
 const BASE =
   (import.meta.env.VITE_VOCAB_API_URL as string | undefined) ??
   'https://peakvocab-api-stage-vkkf2.ondigitalocean.app';
 
-// Shared app token for authenticated writes (enroll/answers/level/areas).
+// Shared app token for authenticated writes (enroll/answers/level/areas/times/feedback).
 // NOTE: this ships in the frontend bundle and is therefore public — it's a
 // low-sensitivity, rotatable app token by design (see .env.example).
 const TOKEN = import.meta.env.VITE_APP_TOKEN as string | undefined;
+
+// This activity's name, used to scope UI strings. Each repo sets VITE_APP_NAME
+// (e.g. 'SpeedMatch'); the API merges the shared common set with any per-app
+// overrides. Falls back to the shared 'Challenges' set when unset.
+const APP_NAME = (import.meta.env.VITE_APP_NAME as string | undefined) || 'Challenges';
 
 function writeHeaders(): HeadersInit {
   const h: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -69,14 +86,14 @@ export interface AnswerResponse {
   levelAdvancedTo: Difficulty | null;
 }
 
-// ── Endpoints ───────────────────────────────────────────────────────────────
+// ── Bin engine (per-user) ────────────────────────────────────────────────────
 
 export interface EnrollOpts {
   userId: string;
   nativeLanguage: LanguageCode;
-  avatar?: AvatarId;            // capitalized internal id; lowercased on the wire
+  avatar?: AvatarId; // capitalized internal id; lowercased on the wire
   level?: Difficulty;
-  areas?: AreaCode[];           // [] = all areas
+  areas?: AreaCode[]; // [] = all areas
 }
 
 /** Enroll a user (idempotent). First call auto-fills a 20-word bin. */
@@ -100,8 +117,7 @@ export function getNext(userId: string): Promise<NextResponse> {
 
 /** Every word this user has ever been assigned, WITH its current streak/status —
  *  including `completed` words that have left the 20-word bin. Powers the
- *  start-screen streak buckets (learning / mastering / mastered). Unlike
- *  `getBin`, this is the full history, not the active working set. */
+ *  start-screen streak buckets. Unlike `getBin`, this is the full history. */
 export async function getUserWords(userId: string): Promise<ApiWord[]> {
   const body = await getJson<{ userId: string; count: number; words: ApiWord[] }>(
     `/api/app/users/${userId}/words`,
@@ -135,24 +151,28 @@ export function getProgress(userId: string, areas?: AreaCode[]): Promise<Progres
   return getJson<ProgressResponse>(`/api/app/users/${userId}/progress${q}`);
 }
 
+// ── Config (no auth) ──────────────────────────────────────────────────────────
+/** The engine's tunable settings + CEFR↔difficulty maps. Read these instead of
+ *  hardcoding COMPLETE_AT / the level mapping (they'd drift when app_setting changes). */
+export function getConfig(): Promise<AppConfig> {
+  return getJson<AppConfig>('/api/app/config');
+}
+
 // ── Feedback ─────────────────────────────────────────────────────────────────
-// User-submitted feedback on a specific challenge. Recorded server-side in a
-// `feedback` table; picture/word/sentence are filled in where applicable so the
-// review tool can show what the feedback is about.
 export interface FeedbackInput {
-  userId: string;          // required — the API 400s without it
-  userName?: string;       // PLP shopper identity, to attribute the report
+  userId: string; // required — the API 400s without it
+  userName?: string; // PLP shopper identity, to attribute the report
   userEmail?: string;
-  challengeType: string;   // human label, e.g. "Pick the Word (image)"
-  challengeKind: string;   // step kind: pick | match | hearchoose | translate
-  pickMode?: string;       // PickOne sub-mode when challengeKind is 'pick'
-  senseId?: string;        // the word's stable id, when a single word is involved
-  word?: string;           // the English word(s) shown
-  pictureUrl?: string;     // absolute image URL, for image challenges
-  sentence?: string;       // the sentence, for sentence challenges
-  language: string;        // native language
-  level: string;           // difficulty
-  message: string;         // the user's typed feedback
+  challengeType: string; // human label, e.g. "Pick the Word (image)"
+  challengeKind: string; // step kind: pick | match | hearchoose | translate | climb | cloze
+  pickMode?: string; // PickOne sub-mode when challengeKind is 'pick'
+  senseId?: string; // the word's stable id, when a single word is involved
+  word?: string; // the English word(s) shown
+  pictureUrl?: string; // absolute image URL, for image challenges
+  sentence?: string; // the sentence, for sentence challenges
+  language: string; // native language
+  level: string; // difficulty
+  message: string; // the user's typed feedback
 }
 
 /** Record challenge feedback (auth). */
@@ -160,94 +180,132 @@ export function submitFeedback(input: FeedbackInput): Promise<{ ok: boolean; id?
   return postJson('/api/app/feedback', input);
 }
 
-// ── Leaderboard times ────────────────────────────────────────────────────────
-// A completed game's total time, recorded server-side in a `lesson_times` table.
-// Only flawless runs (wrongCount === 0) are ranked; the response carries this
-// run's rank among all flawless runs for the same `app`.
+// ── Leaderboards (POST auth; GET none) ────────────────────────────────────────
+// Two board types, chosen per board (each `app` string is one board):
+//   • TIME  — fastest flawless run wins (Survival, Balloons). submitTime / fetchBestTime.
+//   • SCORE — highest score wins (SpeedMatch: correct matches in 90s). submitScore / fetchBestScore.
+
 export interface SubmitTimeInput {
-  userId: string;       // required — attributes the run
-  app: string;          // which game: 'balloons' | 'survival' | …
-  durationMs: number;   // total time to finish the game
-  wrongCount: number;   // wrong/missed answers this run (0 = flawless)
-  rounds: number;       // how many rounds the game had (e.g. 15)
-  level: string;        // difficulty, for context / future filtering
+  userId: string;
+  app: string; // board name, e.g. 'survival' | 'balloons'
+  durationMs: number; // total time to finish the game
+  wrongCount: number; // wrong/missed answers this run (0 = flawless)
+  rounds: number; // how many rounds the game had
+  level: string; // difficulty, for context
 }
 
 export interface TimeResult {
+  metric: 'time';
   durationMs: number;
-  flawless: boolean;      // wrongCount === 0
-  rank: number | null;    // 1-based rank among flawless runs (null when not flawless)
-  totalFlawless: number;  // how many flawless runs exist for this app (incl. this one)
+  flawless: boolean; // wrongCount === 0
+  rank: number | null; // 1-based rank among flawless runs (null when not flawless)
+  totalFlawless: number; // flawless runs for this app (incl. this one)
 }
 
 /** Record a completed game's time and get its rank among flawless runs (auth). */
 export function submitTime(input: SubmitTimeInput): Promise<TimeResult> {
-  return postJson<TimeResult>('/api/app/times', input);
+  return postJson<TimeResult>('/api/app/times', { metric: 'time', ...input });
 }
 
 export interface BestTime {
-  bestMs: number | null;  // fastest flawless time for the app (null if none yet)
-  count: number;          // how many flawless runs exist
+  bestMs: number | null; // fastest flawless time for the app (null if none yet)
+  count: number; // how many flawless runs exist
 }
 
-/** Current best flawless time for an app — feeds the in-game countdown dial (no auth). */
+/** Current best flawless time for a time board (no auth). */
 export function fetchBestTime(app: string): Promise<BestTime> {
   return getJson<BestTime>(`/api/app/times/best?app=${encodeURIComponent(app)}`);
 }
 
-// This app's name, sent to scope UI strings to the Challenges app (the API's
-// ui_strings table is shared across apps).
-const APP_NAME = 'Challenges';
+export interface ScoreResult {
+  metric: 'score';
+  score: number;
+  wrongCount: number;
+  rank: number; // 1-based rank among all runs for this board (higher score = better)
+  total: number; // total runs for this board (incl. this one)
+}
 
-/** Native-language UI chrome strings for this app (no auth). Keyed by the same
- *  keys as src/i18n/strings.ts; any key the API omits falls back to the English
- *  default baked into the bundle. Returns {} for an unknown language. */
+/** Record a score-board run (e.g. SpeedMatch's correct-match count) and get its
+ *  rank among all runs for the board (auth). The score is sent as `rounds`. */
+export function submitScore(input: {
+  userId: string;
+  app: string; // board name, e.g. 'speedmatch'
+  score: number; // the run's score (correct matches)
+  wrongCount?: number;
+  level?: string;
+}): Promise<ScoreResult> {
+  return postJson<ScoreResult>('/api/app/times', {
+    userId: input.userId,
+    app: input.app,
+    metric: 'score',
+    rounds: input.score,
+    wrongCount: input.wrongCount ?? 0,
+    ...(input.level ? { level: input.level } : {}),
+  });
+}
+
+export interface BestScore {
+  bestScore: number | null; // highest score for the board (null if none yet)
+  count: number; // how many runs exist
+}
+
+/** Current high score for a score board (no auth). */
+export function fetchBestScore(app: string): Promise<BestScore> {
+  return getJson<BestScore>(`/api/app/times/best?app=${encodeURIComponent(app)}&by=score`);
+}
+
+// ── Corpus reads (no auth) ────────────────────────────────────────────────────
+
+/** Native-language UI chrome strings for THIS activity (scoped by VITE_APP_NAME).
+ *  Any key the API omits falls back to the English default baked into the bundle. */
 export async function fetchUiStrings(lang: string): Promise<Record<string, string>> {
   const body = await getJson<{ lang: string; strings: Record<string, string> }>(
-    `/api/app/ui-strings?appName=${APP_NAME}&lang=${encodeURIComponent(lang)}`,
+    `/api/app/ui-strings?appName=${encodeURIComponent(APP_NAME)}&lang=${encodeURIComponent(lang)}`,
   );
   return body.strings ?? {};
 }
 
 /** Area picker source (no auth). Pass the learner's native language to get
- *  translated topic names in `area.translations[lang]` (English fallback per
- *  area). Use nativeLanguage= (not lang=) so an unsupported language returns
- *  200 with English rather than 400. */
+ *  translated topic names in `area.translations[lang]` (English fallback). Use
+ *  nativeLanguage= so an unsupported language returns 200 (English) not 400. */
 export async function fetchAreas(nativeLanguage?: string): Promise<AreaInfo[]> {
   const q = nativeLanguage ? `?nativeLanguage=${encodeURIComponent(nativeLanguage)}` : '';
   const body = await getJson<{ count: number; areas: AreaInfo[] }>(`/api/vocab/areas${q}`);
   return body.areas;
 }
 
-/** Every corpus word that has a picture, across ALL areas + difficulty levels
- *  (no auth). Powers the stage-only PICS ONLY review mode — independent of any
- *  user's level/area-scoped bin. */
+/** Per-area × per-difficulty corpus word counts (no auth, user-agnostic). The
+ *  shared denominator for every activity's progress bars — no /progress needed. */
+export async function fetchAreaTotals(): Promise<AreaTotals> {
+  const body = await getJson<{ totals: AreaTotals }>('/api/vocab/area-totals');
+  return body.totals ?? {};
+}
+
+/** Corpus words for an area+difficulty (no auth): every word at that level,
+ *  WITHOUT per-user state (no status/streak) — carries `senseId`, same key as
+ *  the bin endpoints. Used for the "all words" list + cloze validation. */
+export async function fetchWords(
+  area: AreaCode,
+  difficulty: Difficulty,
+  lang?: LanguageCode,
+): Promise<CorpusWord[]> {
+  const u = new URL('/api/vocab/words', BASE);
+  u.searchParams.set('area', area);
+  u.searchParams.set('difficulty', difficulty);
+  if (lang) u.searchParams.set('lang', lang);
+  const body = await getJson<{ words: CorpusWord[] }>(u.pathname + u.search);
+  return body.words ?? [];
+}
+
+/** Every corpus word that has a picture, across ALL areas + levels (no auth).
+ *  Powers the stage-only PICS ONLY review mode. */
 export async function fetchPicturedWords(): Promise<ApiWord[]> {
   const body = await getJson<{ count: number; words: ApiWord[] }>('/api/vocab/pictures');
   return body.words ?? [];
 }
 
-/** Absolute URL of a word's image, or null if it has none (abstract word or
- *  not-yet-generated). `pictureUrl` is a relative path; immutable/cacheable. */
-export function imageUrl(word: { pictureUrl: string | null }): string | null {
-  return word.pictureUrl ? new URL(word.pictureUrl, BASE).toString() : null;
-}
-
-/** URL of the avatar-voice TTS clip for `text` (no auth; immutable/cacheable).
- *  Returns audio/mpeg. `avatar` is the lowercase id (ivy|jade|reed|clay).
- *  `lang` is an optional ISO 639-1 hint (e.g. 'es') so the multilingual voice
- *  pronounces native-language sentences correctly; omit for English. */
-export function ttsUrl(text: string, avatar: string, lang?: string): string {
-  const u = new URL('/api/vocab/tts', BASE);
-  u.searchParams.set('avatar', avatar);
-  u.searchParams.set('text', text);
-  if (lang) u.searchParams.set('lang', lang);
-  return u.toString();
-}
-
-// ── Example sentences (no auth) ──────────────────────────────────────────────
-// Standalone example sentences for an area + difficulty, pitched to that CEFR
-// level, with an optional native translation when `lang` is passed (es only today).
+/** Example sentences for an area + difficulty (no auth), pitched to that CEFR
+ *  level, with an optional native translation when `lang` is passed (es only today). */
 export async function fetchSentences(
   area: AreaCode,
   difficulty: Difficulty,
@@ -259,4 +317,23 @@ export async function fetchSentences(
   if (lang) u.searchParams.set('lang', lang);
   const body = await getJson<{ sentences: Sentence[] }>(u.pathname + u.search);
   return body.sentences ?? [];
+}
+
+// ── URL builders (no request) ────────────────────────────────────────────────
+
+/** Absolute URL of a word's image, or null if it has none. `pictureUrl` is a
+ *  relative path; immutable/cacheable (carries a ?v= cache-buster). */
+export function imageUrl(word: { pictureUrl: string | null }): string | null {
+  return word.pictureUrl ? new URL(word.pictureUrl, BASE).toString() : null;
+}
+
+/** URL of the avatar-voice TTS clip for `text` (no auth; immutable/cacheable).
+ *  `avatar` is the lowercase id (ivy|jade|reed|clay); `lang` is an optional ISO
+ *  639-1 hint so the multilingual voice pronounces native sentences correctly. */
+export function ttsUrl(text: string, avatar: string, lang?: string): string {
+  const u = new URL('/api/vocab/tts', BASE);
+  u.searchParams.set('avatar', avatar);
+  u.searchParams.set('text', text);
+  if (lang) u.searchParams.set('lang', lang);
+  return u.toString();
 }
