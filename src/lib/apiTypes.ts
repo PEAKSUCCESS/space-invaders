@@ -72,6 +72,14 @@ export interface Sentence {
   id?: string;
   english: string;
   translation?: string;
+  // The cloze / fill-in-the-blank target — present only for annotated sentences.
+  // The sentence teaches this NOUN sense; blank exactly `blankWord` and show the
+  // sense's own clue (nativeDefinition ?? definition, or pictureUrl).
+  senseId?: string;
+  blankWord?: string; // exact surface token to blank (e.g. "water")
+  definition?: string; // the target sense's English definition
+  nativeDefinition?: string; // its native-language definition (when ?lang= is passed)
+  pictureUrl?: string; // the target sense's picture (relative; resolve with imageUrl)
 }
 
 /** GET /api/app/config — the tunable engine settings + CEFR↔difficulty maps, so
