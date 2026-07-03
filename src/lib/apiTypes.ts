@@ -91,6 +91,10 @@ export interface AppConfig {
   freqs: { new: number; proficient: number; mastered: number };
   cefrToDifficulty: Record<string, Difficulty>;
   difficultyToCefr: Record<Difficulty, string[]>;
+  /** Play-set size SpeedMatch requests via getBin(userId, size). Server-controlled
+   *  (app_setting 'speedmatch_pool_size') so it's changeable without a client
+   *  rebuild — change the DB value, effective within the /config cache window. Default 40. */
+  speedMatchPoolSize: number;
 }
 
 /** GET /api/vocab/area-totals — corpus (user-agnostic) word counts per area × level. */

@@ -107,8 +107,14 @@ export function enrollUser(opts: EnrollOpts): Promise<BinResponse> {
   });
 }
 
-export function getBin(userId: string): Promise<BinResponse> {
-  return getJson<BinResponse>(`/api/app/users/${userId}/bin`);
+/** The user's active bin. Pass `size` to request a larger play-set (the real bin +
+ *  transient, non-persisted overflow up to `size`) for games whose board churns faster
+ *  than the 20-word bin (e.g. SpeedMatch). Returns fewer than `size` if the corpus is
+ *  thin. Omit `size` for the plain bin. The size number itself is server-controlled —
+ *  read it from getConfig().speedMatchPoolSize so it's changeable without a rebuild. */
+export function getBin(userId: string, size?: number): Promise<BinResponse> {
+  const q = size && size > 0 ? `?size=${Math.trunc(size)}` : '';
+  return getJson<BinResponse>(`/api/app/users/${userId}/bin${q}`);
 }
 
 export function getNext(userId: string): Promise<NextResponse> {
