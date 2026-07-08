@@ -354,7 +354,10 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
 }
 
 .topbar {
-  position: sticky; top: 56px; z-index: 10;
+  /* top:0, not 56px: the fixed .peak-header's space is already reserved in flow
+     by .peak-header-root, so the bar sits directly below it. A 56px inset would
+     double-count the header and push the bar down, leaving a gap above it. */
+  position: sticky; top: 0; z-index: 10;
   display: flex; justify-content: space-between; align-items: center;
   padding: 12px 20px; background: var(--panel); border-bottom: 1px solid #e2d5b0;
   font-size: 14px; color: var(--muted);
