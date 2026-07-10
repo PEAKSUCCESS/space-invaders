@@ -45,6 +45,38 @@ const CLIMBER_HEAD_PX = 78;
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
+// Hidden-pineapple easter egg: at most one per game, at a random spot in the
+// ocean (depth is a % of the water body, like the fish, so it surfaces as the
+// water rises). Clicking it pauses the game and pops the YIPEE card; it never
+// respawns within the same game (not even after "Try again").
+const PINEAPPLE_CHANCE = 1; // spawn probability per game (1 while reviewing; tune down later)
+// Module-level (Math.random outside render, same convention as coinFlip/buildChoices).
+function rollPineapple(): { left: number; bottom: number } | null {
+  if (Math.random() >= PINEAPPLE_CHANCE) return null;
+  return { left: 6 + Math.random() * 78, bottom: 8 + Math.random() * 60 };
+}
+
+function Pineapple() {
+  return (
+    <svg viewBox="0 0 40 62" className="pineapple-svg" aria-hidden="true">
+      {/* crown of leaves */}
+      <g fill="#3d9e4c">
+        <path d="M20 22 L7 8 L17 16 Z" fill="#2f8a3e" />
+        <path d="M20 22 L33 8 L23 16 Z" fill="#2f8a3e" />
+        <path d="M20 22 L12 2 L19 13 Z" />
+        <path d="M20 22 L28 2 L21 13 Z" />
+        <path d="M20 22 L20 0 L22.5 12 Z" fill="#2f8a3e" />
+      </g>
+      {/* body + crosshatch skin */}
+      <ellipse cx="20" cy="40" rx="14" ry="19" fill="#f0a83a" />
+      <g stroke="#c9822a" strokeWidth="1.4" opacity="0.85" fill="none">
+        <path d="M9 28 L33 48" /><path d="M7 36 L31 55" /><path d="M8 45 L26 58" /><path d="M13 23 L34 40" />
+        <path d="M31 28 L7 48" /><path d="M33 36 L9 55" /><path d="M32 45 L14 58" /><path d="M27 23 L6 40" />
+      </g>
+    </svg>
+  );
+}
+
 // A slim back-view hiker climbing the ladder (cap + ponytail + small green pack
 // facing us, hands gripping a rung overhead, boots planted on a rung) — mimics
 // public/hiker.png's palette (olive shirt/skin, orange cap, brown pants), no poles.
@@ -289,6 +321,10 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
   // The climber's height up the scene (%); rises a step per correct answer (a CSS
   // transition animates the climb). Mirrored to a ref for the water-collision test.
   const [climberPos, setClimberPos] = useState(CLIMBER_START);
+  // Hidden pineapple: rolled once per game (survives retries — at most one find).
+  const [pineapple] = useState(rollPineapple);
+  const [pineappleFound, setPineappleFound] = useState(false);
+  const [yipeeOpen, setYipeeOpen] = useState(false);
 
   const resolvedRef = useRef(false);   // current round settled (correct choice)
   const answeredRef = useRef(false);   // first choice graded to the API
@@ -300,6 +336,7 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
   const waterPosRef = useRef(0);
   const lastTsRef = useRef<number | null>(null);
   const pausedRef = useRef(paused);
+  const yipeeRef = useRef(false); // freeze the water while the YIPEE card is up
   const waterRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
   const sceneHRef = useRef(0); // cached scene pixel height (for the head-coverage test)
@@ -345,7 +382,7 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
       lastTsRef.current = ts;
       if (last == null) return;
       const dt = Math.min(0.05, (ts - last) / 1000); // clamp big tab-switch gaps
-      const live = !pausedRef.current && !advancingRef.current && !gameOverRef.current && !doneRef.current;
+      const live = !pausedRef.current && !yipeeRef.current && !advancingRef.current && !gameOverRef.current && !doneRef.current;
       if (live) waterPosRef.current = clamp(waterPosRef.current + dt * riseRef.current, 0, 100);
       if (waterRef.current) waterRef.current.style.height = `${waterPosRef.current}%`;
       // Game over only when the water rises above the climber's head (covered).
@@ -396,6 +433,18 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
       waterPosRef.current = clamp(waterPosRef.current + (config?.wrongSurge ?? WRONG_SURGE), 0, 100);
       setChosen((c) => ({ ...c, [choiceKey(choice.id)]: 'wrong' }));
     }
+  }
+
+  function foundPineapple() {
+    if (pineappleFound) return;
+    setPineappleFound(true); // gone for the rest of the game
+    yipeeRef.current = true; // stop the water while the card is up
+    setYipeeOpen(true);
+  }
+
+  function closeYipee() {
+    yipeeRef.current = false;
+    setYipeeOpen(false);
   }
 
   // Replay the whole climb from the bottom. Answers already submitted this run
@@ -479,6 +528,22 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
             <path d="M0 10 q 25 -10 50 0 t 50 0 t 50 0 t 50 0 V20 H0 Z" />
           </svg>
           <SeaLife />
+          {/* The hidden pineapple — clipped to the water body like the sea life
+              (its own wrapper, since .climb-sealife kills pointer events), so it
+              stays hidden until the rising water reveals it. */}
+          {pineapple && !pineappleFound && (
+            <div className="climb-pineapple-clip" aria-hidden="true">
+              <button
+                type="button"
+                className="climb-pineapple"
+                style={{ left: `${pineapple.left}%`, bottom: `${pineapple.bottom}%` }}
+                tabIndex={-1}
+                onClick={foundPineapple}
+              >
+                <Pineapple />
+              </button>
+            </div>
+          )}
           {/* A dolphin that occasionally leaps from the (rising) water surface. */}
           <div className="climb-dolphin" aria-hidden="true"><Dolphin /></div>
         </div>
@@ -491,6 +556,16 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
           </div>
         )}
       </div>
+
+      {/* Found-the-pineapple celebration — freezes the game until OK. */}
+      {yipeeOpen && (
+        <div className="yipee-overlay">
+          <div className="yipee-card">
+            <div className="yipee-title">YIPEE</div>
+            <button type="button" className="yipee-ok-btn" onClick={closeYipee}>OK</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

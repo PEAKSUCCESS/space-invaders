@@ -742,6 +742,37 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
   100%      { transform: translate(-55%, 35%)  rotate(-25deg); opacity: 0; }
 }
 
+/* Hidden pineapple easter egg — a clickable sprite drifting in the water. Its
+   wrapper clips it to the water body (like .climb-sealife, but that layer kills
+   pointer events), so it stays hidden until the rising water reveals it. */
+.climb-pineapple-clip { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.climb-pineapple {
+  position: absolute; width: 32px; padding: 0; border: none; background: none;
+  cursor: pointer; pointer-events: auto; opacity: 0.95;
+  animation: jelly-drift 8s ease-in-out infinite;
+}
+.pineapple-svg { display: block; width: 100%; height: auto; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2)); }
+
+/* YIPEE — found the pineapple. Fixed overlay so the whole game is blocked/paused. */
+.yipee-overlay {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+}
+.yipee-card {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  background: var(--bg); border-radius: 20px; padding: 30px 48px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  animation: pop-in 0.3s ease-out both;
+}
+.yipee-title { font-size: 46px; font-weight: 800; color: var(--accent); letter-spacing: 2px; }
+.yipee-ok-btn {
+  padding: 10px 42px; font-family: inherit; font-size: 17px; font-weight: 700;
+  color: #fff; background: var(--accent); border: none; border-radius: 999px; cursor: pointer;
+  box-shadow: var(--shadow); transition: filter 0.15s;
+}
+.yipee-ok-btn:hover { filter: brightness(1.06); }
+
 /* Countdown dial — winds down toward the leader/par time, top-right of the scene. */
 .countdown-dial {
   position: absolute; top: 8px; right: 8px; z-index: 8;
