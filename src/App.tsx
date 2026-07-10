@@ -12,6 +12,7 @@ import { fireConfetti } from './components/effects/Confetti';
 import { playCorrect } from './lib/sound';
 import { buildLesson, type Lesson, type LessonStep } from './game/lesson';
 import { completeWord, fetchBestTime, imageUrl, submitAnswer, submitFeedback, submitTime, type TimeResult } from './lib/appApi';
+import { fetchPineappleChance, flushActivity, initActivityTracking, pineappleChance } from './lib/activityTime';
 import { DEFAULT_CONFIG, loadGameConfig, type GameConfig } from './lib/gameConfig';
 import { loadProgress, loadSave, writeProgress, writeSave, type SaveState } from './game/save';
 import { parseLaunchParams } from './lib/launchParams';
@@ -67,6 +68,20 @@ function App() {
 
   const launchParams = useMemo(() => parseLaunchParams(window.location.search), []);
   const initialProfile: Partial<Profile> = { ...(savedProfile ?? {}), ...launchParams };
+
+  // Active-usage tracking: tally idle-gated seconds from the moment the shopper's
+  // id is known; reported (and reset) on finish/quit via returnToHub, and on
+  // pagehide/tab-hidden by the tracker itself.
+  const trackedUser = profile?.userId ?? launchParams.userId;
+  // Pineapple spawn odds — driven by the shopper's 14-day active usage (all
+  // activities). Seeded at the 10% floor so a slow/missing endpoint still
+  // spawns occasionally; resolves well before the first climb mounts.
+  const [pineappleOdds, setPineappleOdds] = useState(pineappleChance(0));
+  useEffect(() => {
+    if (!trackedUser) return;
+    initActivityTracking(trackedUser, 'survival');
+    fetchPineappleChance(trackedUser).then(setPineappleOdds);
+  }, [trackedUser]);
 
   // The landing hub can deep-link straight into the game with its exact selections
   // (?autostart=1 plus level/areas/audio), skipping the start screen — but only
@@ -204,6 +219,9 @@ function App() {
   // history, so the caller can fall back in-app (the game loop stays testable
   // without a hub running).
   function returnToHub(): boolean {
+    // Finish or quit — report the active-usage tally before leaving (also covers
+    // the in-app dev fallback, where no pagehide would fire).
+    flushActivity(true);
     if (window.history.length > 1) {
       window.history.back();
       return true;
@@ -333,6 +351,7 @@ function App() {
           audio={profile.audio}
           paused={feedbackOpen}
           config={gameConfig}
+          pineappleChance={pineappleOdds}
           startTime={gameStartMs ?? undefined}
           targetMs={raceTargetMs}
           targetLabel={raceLabel}

@@ -48,11 +48,13 @@ async function getJson<T>(path: string): Promise<T> {
   return (await r.json()) as T;
 }
 
-async function postJson<T>(path: string, body: unknown): Promise<T> {
+async function postJson<T>(path: string, body: unknown, keepalive = false): Promise<T> {
   const r = await fetch(new URL(path, BASE).toString(), {
     method: 'POST',
     headers: writeHeaders(),
     body: JSON.stringify(body),
+    // keepalive lets a teardown-time request (pagehide flush) outlive the page.
+    ...(keepalive ? { keepalive: true } : {}),
   });
   if (!r.ok) throw new Error(`POST ${path} ${r.status}: ${await r.text()}`);
   return (await r.json()) as T;
@@ -184,6 +186,49 @@ export interface FeedbackInput {
 /** Record challenge feedback (auth). */
 export function submitFeedback(input: FeedbackInput): Promise<{ ok: boolean; id?: string | number }> {
   return postJson('/api/app/feedback', input);
+}
+
+// ── Active-usage time ─────────────────────────────────────────────────────────
+
+export interface ActivityInput {
+  userId: string; // the shopper's CUID
+  app: string; // activity name, e.g. 'survival' | 'balloons' | 'speedmatch' | 'challenges' | 'hike'
+  seconds: number; // idle-gated ACTIVE seconds (see lib/activityTime.ts), not wall-clock
+  date: string; // the shopper's local calendar date, YYYY-MM-DD
+}
+
+/** Record a chunk of active usage (auth). Chunks for the same user/app/date sum
+ *  server-side. `keepalive` lets the pagehide flush outlive the page. */
+export function submitActivity(input: ActivityInput, keepalive = false): Promise<{ ok: boolean }> {
+  return postJson<{ ok: boolean }>('/api/app/activity', input, keepalive);
+}
+
+export interface ActivityDay {
+  date: string; // YYYY-MM-DD (as reported by the client at record time)
+  app: string;
+  seconds: number; // summed active seconds for that user/app/date
+}
+
+export interface ActivitySummary {
+  userId: string;
+  app: string | null; // the filter that was applied, if any
+  days: number; // window size the server used
+  totalSeconds: number; // sum over the whole window
+  byDate: ActivityDay[]; // newest first
+}
+
+/** Per-date active-usage sums for a user (no auth), most recent `days` (server
+ *  default 30). Pass `app` to scope to one activity — e.g. to drive the
+ *  pineapple-spawn probability off recent active minutes. */
+export function fetchActivity(
+  userId: string,
+  opts?: { app?: string; days?: number },
+): Promise<ActivitySummary> {
+  const u = new URL('/api/app/activity', BASE);
+  u.searchParams.set('userId', userId);
+  if (opts?.app) u.searchParams.set('app', opts.app);
+  if (opts?.days) u.searchParams.set('days', String(Math.trunc(opts.days)));
+  return getJson<ActivitySummary>(u.pathname + u.search);
 }
 
 // ── Leaderboards (POST auth; GET none) ────────────────────────────────────────

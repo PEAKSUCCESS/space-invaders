@@ -18,6 +18,7 @@ interface Props {
   audio?: boolean;
   paused?: boolean;                // freeze the rising water (e.g. feedback modal open)
   config?: GameConfig;             // runtime difficulty tuning (water rise, etc.)
+  pineappleChance?: number;        // 0–1 spawn odds for the hidden pineapple (usage-driven)
   startTime?: number;              // game start timestamp (for the countdown dial)
   targetMs?: number;               // dial target — the leaderboard best or the par time
   targetLabel?: string;            // 'best' | 'par'
@@ -48,11 +49,12 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 // Hidden-pineapple easter egg: at most one per game, at a random spot in the
 // ocean (depth is a % of the water body, like the fish, so it surfaces as the
 // water rises). Clicking it pauses the game and pops the YIPEE card; it never
-// respawns within the same game (not even after "Try again").
-const PINEAPPLE_CHANCE = 1; // spawn probability per game (1 while reviewing; tune down later)
+// respawns within the same game (not even after "Try again"). The spawn
+// probability comes from the shopper's 14-day active usage (pineappleChance
+// prop, resolved in App via lib/activityTime).
 // Module-level (Math.random outside render, same convention as coinFlip/buildChoices).
-function rollPineapple(): { left: number; bottom: number } | null {
-  if (Math.random() >= PINEAPPLE_CHANCE) return null;
+function rollPineapple(chance: number): { left: number; bottom: number } | null {
+  if (Math.random() >= chance) return null;
   return { left: 6 + Math.random() * 78, bottom: 8 + Math.random() * 60 };
 }
 
@@ -311,7 +313,7 @@ function buildChoices(target: ApiWord, choiceKind: ChoiceKind, pool: ApiWord[], 
   return shuffle([correct, ...pickN(distractors, CHOICE_COUNT - 1)]);
 }
 
-export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, paused = false, config, startTime, targetMs, targetLabel, onRetry, onAnswer, onComplete }: Props) {
+export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, paused = false, config, pineappleChance = 0.1, startTime, targetMs, targetLabel, onRetry, onAnswer, onComplete }: Props) {
   const total = rounds.length;
   const [roundIndex, setRoundIndex] = useState(0);
   const [gameOver, setGameOver] = useState(false);
@@ -322,7 +324,7 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
   // transition animates the climb). Mirrored to a ref for the water-collision test.
   const [climberPos, setClimberPos] = useState(CLIMBER_START);
   // Hidden pineapple: rolled once per game (survives retries — at most one find).
-  const [pineapple] = useState(rollPineapple);
+  const [pineapple] = useState(() => rollPineapple(pineappleChance));
   const [pineappleFound, setPineappleFound] = useState(false);
   const [yipeeOpen, setYipeeOpen] = useState(false);
 
