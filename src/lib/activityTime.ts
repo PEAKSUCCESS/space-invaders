@@ -73,8 +73,13 @@ export function flushActivity(keepalive = false): void {
 
 const PINEAPPLE_WINDOW_DAYS = 14;
 
+// TEMP (Brad, 2026-07-10): force a 100% spawn while the rollout is reviewed.
+// Set back to false to restore the usage bands below.
+const PINEAPPLE_FORCE_100 = true;
+
 /** Map 14-day active seconds → spawn probability (0–1). Bands per Brad. */
 export function pineappleChance(totalSeconds: number): number {
+  if (PINEAPPLE_FORCE_100) return 1;
   if (totalSeconds > 12000) return 1; // 12001+
   if (totalSeconds > 8000) return 0.8; // 8001–12000
   if (totalSeconds > 4000) return 0.5; // 4001–8000
