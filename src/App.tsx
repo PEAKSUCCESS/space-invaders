@@ -11,7 +11,7 @@ import { FeedbackModal, type FeedbackContext } from './components/FeedbackModal'
 import { fireConfetti } from './components/effects/Confetti';
 import { playCorrect } from './lib/sound';
 import { buildLesson, type Lesson, type LessonStep } from './game/lesson';
-import { completeWord, fetchBestTime, imageUrl, submitAnswer, submitFeedback, submitTime, type TimeResult } from './lib/appApi';
+import { awardPineappleFind, completeWord, fetchBestTime, imageUrl, submitAnswer, submitFeedback, submitTime, type TimeResult } from './lib/appApi';
 import { fetchPineappleChance, flushActivity, initActivityTracking, pineappleChance } from './lib/activityTime';
 import { DEFAULT_CONFIG, loadGameConfig, type GameConfig } from './lib/gameConfig';
 import { loadProgress, loadSave, writeProgress, writeSave, type SaveState } from './game/save';
@@ -358,6 +358,7 @@ function App() {
           onRetry={() => { const now = Date.now(); lessonStartRef.current = now; setGameStartMs(now); wrongCountRef.current = 0; }}
           onAnswer={handleAnswer}
           onComplete={onChallengeComplete}
+          onPineappleFound={() => void awardPineappleFind(profile.userId, 'survival')}
         />
       )}
 

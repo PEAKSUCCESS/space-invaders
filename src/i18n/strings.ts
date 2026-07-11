@@ -105,6 +105,10 @@ export const STRINGS = {
   'feedback.sending': 'Sending…',
   'feedback.send': 'Send feedback',
 
+  // Found the hidden pineapple (YIPEE card)
+  'pineapple.found':
+    'Great work. Keep up the good work. The more time you spend in these games, the more often the pineapple will show up for you to find. Each time you find it, you get 1,000 tokens that can be used for learning labs, coaching clips, AI chat and Live chat.',
+
   // Accessibility / control labels
   'a11y.playSentence': 'Play sentence',
   'a11y.playWord': 'Play word',

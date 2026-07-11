@@ -764,8 +764,10 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
   background: var(--bg); border-radius: 20px; padding: 30px 48px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
   animation: pop-in 0.3s ease-out both;
+  max-width: min(520px, calc(100vw - 32px));
 }
 .yipee-title { font-size: 46px; font-weight: 800; color: var(--accent); letter-spacing: 2px; }
+.yipee-msg { margin: 0; font-size: 16px; line-height: 1.5; text-align: center; }
 .yipee-ok-btn {
   padding: 10px 42px; font-family: inherit; font-size: 17px; font-weight: 700;
   color: #fff; background: var(--accent); border: none; border-radius: 999px; cursor: pointer;
