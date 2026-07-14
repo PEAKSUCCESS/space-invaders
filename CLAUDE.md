@@ -1,10 +1,10 @@
-# survival
+# space
 
-**Survival** is a Vite + React + TypeScript vocabulary game over the **peakvocab-api** corpus — cloned from the Balloons app (peakvocab-balloons) and reskinned as **"Climb to Safety"** (the main loop; see "The game: Climb to Safety" under What it does). Sibling to (and lighter than) the 3D R3F hiking app.
+**Space** is a Vite + React + TypeScript vocabulary game — a clone of the Survival app (peakvocab-survival) — over the **peakvocab-api** corpus — cloned from the Balloons app (peakvocab-balloons) and reskinned as **"Climb to Safety"** (the main loop; see "The game: Climb to Safety" under What it does). Sibling to (and lighter than) the 3D R3F hiking app.
 
 ## Repo boundary (hard rule)
 
-**Work is restricted to THIS repo (`survival`). Never edit, create, or delete files in any other repo** — notably the sibling backend `../peakvocab-api`, or any HQ/export repo. When a change is needed in another project (e.g. the `/api/vocab/tts` endpoint), **describe it** — exact code/diff as text — so Brad can copy/paste it into that project himself. Reading other repos for context is fine; modifying them is not.
+**Work is restricted to THIS repo (`space`). Never edit, create, or delete files in any other repo** — notably the sibling backend `../peakvocab-api`, or any HQ/export repo. When a change is needed in another project (e.g. the `/api/vocab/tts` endpoint), **describe it** — exact code/diff as text — so Brad can copy/paste it into that project himself. Reading other repos for context is fine; modifying them is not.
 
 ## What it does
 
