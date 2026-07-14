@@ -79,7 +79,7 @@ function App() {
   const [pineappleOdds, setPineappleOdds] = useState(pineappleChance(0));
   useEffect(() => {
     if (!trackedUser) return;
-    initActivityTracking(trackedUser, 'survival');
+    initActivityTracking(trackedUser, 'space');
     fetchPineappleChance(trackedUser).then(setPineappleOdds);
   }, [trackedUser]);
 
@@ -131,7 +131,7 @@ function App() {
       setRaceTargetMs(cfg.parTimeMs);
       setRaceLabel('par');
       if (!p.picsOnly) {
-        fetchBestTime('survival')
+        fetchBestTime('space')
           .then((b) => { if (b.bestMs && b.bestMs > 0) { setRaceTargetMs(b.bestMs); setRaceLabel('best'); } })
           .catch(() => { /* no leaderboard yet → race the par time */ });
       }
@@ -200,7 +200,7 @@ function App() {
       // Record to the global leaderboard (skip the stage-only PICS ONLY review).
       if (profile && !profile.picsOnly) {
         setRankPending(true);
-        submitTime({ userId: profile.userId, app: 'survival', durationMs, wrongCount: wrongCountRef.current, rounds, level: profile.difficulty })
+        submitTime({ userId: profile.userId, app: 'space', durationMs, wrongCount: wrongCountRef.current, rounds, level: profile.difficulty })
           .then((r) => setTimeResult(r))
           .catch((e) => console.warn('submitTime failed', e))
           .finally(() => setRankPending(false));
@@ -358,7 +358,7 @@ function App() {
           onRetry={() => { const now = Date.now(); lessonStartRef.current = now; setGameStartMs(now); wrongCountRef.current = 0; }}
           onAnswer={handleAnswer}
           onComplete={onChallengeComplete}
-          onPineappleFound={() => void awardPineappleFind(profile.userId, 'survival')}
+          onPineappleFound={() => void awardPineappleFind(profile.userId, 'space')}
         />
       )}
 
