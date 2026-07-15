@@ -25,6 +25,7 @@ interface Props {
   onRetry?: () => void;            // "Try again" after drowning — restart the run timer
   onAnswer: (senseId: string, correct: boolean, mode: AnswerMode) => void;
   onComplete: () => void;
+  onPineappleFound?: () => void;   // fired once per find — App credits the token award
 }
 
 const CHOICE_COUNT = 4;          // tiles per round (1 correct + distractors)
@@ -58,7 +59,7 @@ function rollPineapple(chance: number): { left: number; bottom: number } | null 
   return { left: 6 + Math.random() * 78, bottom: 8 + Math.random() * 60 };
 }
 
-function Pineapple() {
+export function Pineapple() {
   return (
     <svg viewBox="0 0 40 62" className="pineapple-svg" aria-hidden="true">
       {/* crown of leaves */}
@@ -313,7 +314,7 @@ function buildChoices(target: ApiWord, choiceKind: ChoiceKind, pool: ApiWord[], 
   return shuffle([correct, ...pickN(distractors, CHOICE_COUNT - 1)]);
 }
 
-export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, paused = false, config, pineappleChance = 0.1, startTime, targetMs, targetLabel, onRetry, onAnswer, onComplete }: Props) {
+export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, paused = false, config, pineappleChance = 0.1, startTime, targetMs, targetLabel, onRetry, onAnswer, onComplete, onPineappleFound }: Props) {
   const total = rounds.length;
   const [roundIndex, setRoundIndex] = useState(0);
   const [gameOver, setGameOver] = useState(false);
@@ -442,6 +443,7 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
     setPineappleFound(true); // gone for the rest of the game
     yipeeRef.current = true; // stop the water while the card is up
     setYipeeOpen(true);
+    onPineappleFound?.(); // App credits the token award (fire-and-forget)
   }
 
   function closeYipee() {
@@ -564,6 +566,7 @@ export function ClimbToSafety({ rounds, pool, language, avatarId, audio = true, 
         <div className="yipee-overlay">
           <div className="yipee-card">
             <div className="yipee-title">YIPEE</div>
+            <p className="yipee-msg">{t('pineapple.found')}</p>
             <button type="button" className="yipee-ok-btn" onClick={closeYipee}>OK</button>
           </div>
         </div>

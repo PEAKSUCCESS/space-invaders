@@ -5,13 +5,13 @@ import { MatchingTiles } from './components/MatchingTiles';
 import { HearAndChoose } from './components/HearAndChoose';
 import { TranslateWhatYouHear } from './components/TranslateWhatYouHear';
 import { PickOne } from './components/PickOne';
-import { ClimbToSafety } from './components/ClimbToSafety';
+import { Asteroids } from './components/Asteroids';
 import { LessonComplete } from './components/LessonComplete';
 import { FeedbackModal, type FeedbackContext } from './components/FeedbackModal';
 import { fireConfetti } from './components/effects/Confetti';
 import { playCorrect } from './lib/sound';
 import { buildLesson, type Lesson, type LessonStep } from './game/lesson';
-import { completeWord, fetchBestTime, imageUrl, submitAnswer, submitFeedback, submitTime, type TimeResult } from './lib/appApi';
+import { awardPineappleFind, completeWord, fetchBestTime, imageUrl, submitAnswer, submitFeedback, submitTime, type TimeResult } from './lib/appApi';
 import { fetchPineappleChance, flushActivity, initActivityTracking, pineappleChance } from './lib/activityTime';
 import { DEFAULT_CONFIG, loadGameConfig, type GameConfig } from './lib/gameConfig';
 import { loadProgress, loadSave, writeProgress, writeSave, type SaveState } from './game/save';
@@ -341,8 +341,9 @@ function App() {
         </div>
       </div>
 
+      {/* The climb-round lesson data now plays as the Asteroids space shooter. */}
       {step.kind === 'climb' && (
-        <ClimbToSafety
+        <Asteroids
           key={stepKey}
           rounds={step.rounds}
           pool={lesson.bin}
@@ -358,6 +359,7 @@ function App() {
           onRetry={() => { const now = Date.now(); lessonStartRef.current = now; setGameStartMs(now); wrongCountRef.current = 0; }}
           onAnswer={handleAnswer}
           onComplete={onChallengeComplete}
+          onPineappleFound={() => void awardPineappleFind(profile.userId, 'space')}
         />
       )}
 
@@ -409,8 +411,8 @@ function App() {
         />
       )}
 
-      {/* The climb game paces itself (15 rounds, rising water), so it has no
-          per-step Skip/Remove controls — only the topbar Quit. */}
+      {/* The asteroids game paces itself (15 waves, incoming rocks), so it has
+          no per-step Skip/Remove controls — only the topbar Quit. */}
       {step.kind !== 'climb' && (
         <div className="skip-bar">
           <button type="button" className="skip-btn" onClick={onChallengeComplete}>
@@ -468,7 +470,7 @@ function feedbackContextFor(step: LessonStep): FeedbackContext {
 function labelForStep(step: LessonStep): string {
   switch (step.kind) {
     case 'climb':
-      return t('challenge.climb');
+      return t('challenge.asteroids');
     case 'match':
       return t('challenge.match');
     case 'hearchoose':

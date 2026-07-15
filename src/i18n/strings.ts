@@ -66,6 +66,7 @@ export const STRINGS = {
   'chrome.loading': 'Loading…',
 
   // Challenge type labels
+  'challenge.asteroids': 'Asteroids',
   'challenge.climb': 'Climb to Safety',
   'challenge.match': 'Matching Tiles',
   'challenge.hearchoose': 'Hear and Choose',
@@ -76,6 +77,14 @@ export const STRINGS = {
   'challenge.pickDefToEn': 'Pick the Word',
   'challenge.pickHearToEn': 'Pick the Word (heard)',
   'challenge.pickImgToEn': 'Pick the Word (image)',
+
+  // Asteroids game
+  'ast.wave': 'Wave {n}/{total}',
+  'ast.instruction': 'Shoot the asteroid that matches — before the rocks smash your ship!',
+  'ast.hull': 'HULL',
+  'ast.gameOver': 'Ship destroyed!',
+  'ast.gameOverHint': 'The asteroids wrecked your ship — try again.',
+  'ast.retry': 'Try again',
 
   // Climb to Safety game
   'climb.instruction': 'Pick the match to climb above the water!',
@@ -104,6 +113,10 @@ export const STRINGS = {
   'feedback.error': "Couldn't send — please try again.",
   'feedback.sending': 'Sending…',
   'feedback.send': 'Send feedback',
+
+  // Found the hidden pineapple (YIPEE card)
+  'pineapple.found':
+    'Great work. Keep up the good work. The more time you spend in these games, the more often the pineapple will show up for you to find. Each time you find it, you get 1,000 tokens that can be used for learning labs, coaching clips, AI chat and Live chat.',
 
   // Accessibility / control labels
   'a11y.playSentence': 'Play sentence',

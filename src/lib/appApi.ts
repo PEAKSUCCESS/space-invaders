@@ -231,6 +231,36 @@ export function fetchActivity(
   return getJson<ActivitySummary>(u.pathname + u.search);
 }
 
+// ── Pineapple token award ─────────────────────────────────────────────────────
+
+/** Credit the found-the-pineapple token award (auth). Fire-and-forget from the
+ *  game — call with `void`, never block or fail the YIPEE card on it. One fresh
+ *  `findId` (UUID) is minted per find and reused across retries: the server
+ *  builds its idempotency reference from it, so a retried request can never
+ *  double-credit, while each new find pays again. Retries transient failures
+ *  (network / 5xx) with the identical payload; a 4xx won't heal, so it gives up. */
+export async function awardPineappleFind(userId: string, app: string): Promise<void> {
+  const findId = crypto.randomUUID();
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const r = await fetch(new URL('/api/app/pineapple', BASE).toString(), {
+        method: 'POST',
+        headers: writeHeaders(),
+        body: JSON.stringify({ userId, app, findId }),
+      });
+      if (r.ok) return;
+      if (r.status < 500) {
+        console.error(`pineapple award rejected (${r.status}): ${await r.text()}`);
+        return;
+      }
+    } catch {
+      /* network error — retry */
+    }
+    await new Promise((res) => setTimeout(res, 1000 * attempt));
+  }
+  console.error('pineapple award failed after retries');
+}
+
 // ── Leaderboards (POST auth; GET none) ────────────────────────────────────────
 // Two board types, chosen per board (each `app` string is one board):
 //   • TIME  — fastest flawless run wins (Survival, Balloons). submitTime / fetchBestTime.
