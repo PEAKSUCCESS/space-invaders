@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from 'react';
 import type { AnswerMode, ApiWord, AvatarId, LanguageCode } from '../types';
 import type { ChoiceKind, ClimbRound } from '../game/lesson';
 import type { GameConfig } from '../lib/gameConfig';
@@ -49,6 +49,7 @@ const BULLET_MS = 150;           // bullet flight time; the shot resolves on imp
 const SHIP_X = 50;               // ship centre, % of scene width
 const SHIP_Y = 50;               // ship centre, % of scene height — dead centre
 const SHIP_RADIUS_PX = 30;       // collision radius around the ship centre
+const SHIELD_RADIUS_PX = 64;     // force-field radius while the ship is held
 const SHARD_COUNT = 8;           // mini-asteroid shards per destroyed rock
 const DECOY_COUNT = 3;           // unlabeled rocks per wave — shootable space junk
 const DECOY_HEAL = 5;            // hull repaired by blasting a decoy rock
@@ -79,7 +80,7 @@ interface RockDef {
   vx0: number; vy0: number;  // velocity, %/sec
   spd: number;               // this rock's cruising speed, %/sec
 }
-interface Kin { x: number; y: number; vx: number; vy: number; spd: number; rPx: number; decoy?: boolean; }
+interface Kin { x: number; y: number; vx: number; vy: number; spd: number; rPx: number; decoy?: boolean; deflected?: boolean; }
 
 // A destroyed rock's shards — small jagged asteroids flung outward, drifting off.
 interface Shard { id: number; x: number; y: number; dx: number; dy: number; dur: number; size: number; points: string; }
@@ -148,12 +149,15 @@ function buildRocks(
     reverse: Math.random() < 0.5,
   });
   const small = isSmallScreen();
+  // Staggered per-rock speeds (shuffled steps + a little jitter) so the choice
+  // rocks reach the ship at clearly different times instead of all at once.
+  const speedSteps = shuffle([0.6, 0.85, 1.1, 1.35]);
   const labeled: RockDef[] = choices.map((c, i) => ({
     ...c,
     id: `${keyPrefix}:${c.id}`, // unique across waves/retries so DOM refs never collide
     sizePx: c.img ? (small ? 74 : 96) : (small ? 84 : 110),
     ...shape(),
-    ...spawn(sides[i % sides.length], DRIFT_PER_SEC * (0.8 + Math.random() * 0.5)),
+    ...spawn(sides[i % sides.length], DRIFT_PER_SEC * speedSteps[i % speedSteps.length] * (0.92 + Math.random() * 0.16)),
   }));
   // Plus a few unlabeled decoys — plain space rocks in varying sizes (always
   // smaller than the word/picture rocks) that can be shot for the fun of it.
@@ -413,6 +417,9 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
   const [shipHit, setShipHit] = useState(false);
   // Floating "+N" over the ship when a decoy/rocket kill repairs the hull.
   const [healFlash, setHealFlash] = useState<{ key: number; amount: number } | null>(null);
+  // Force field: up only while the ship is held (mouse down / touch down).
+  const [shieldOn, setShieldOn] = useState(false);
+  const shieldRef = useRef(false);
   // Hidden pineapple: rolled once per game (survives retries — at most one find).
   const [pineapple] = useState(() => rollPineapple(pineappleChance));
   const [pineappleFound, setPineappleFound] = useState(false);
@@ -462,6 +469,25 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
   }, []);
+
+  // The field drops the moment the press ends, wherever the pointer ended up —
+  // release/cancel are caught at the window so a drag off the ship still lowers it.
+  useEffect(() => {
+    const drop = () => { shieldRef.current = false; setShieldOn(false); };
+    window.addEventListener('pointerup', drop);
+    window.addEventListener('pointercancel', drop);
+    return () => {
+      window.removeEventListener('pointerup', drop);
+      window.removeEventListener('pointercancel', drop);
+    };
+  }, []);
+
+  function raiseShield(e: PointerEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    if (gameOverRef.current) return;
+    shieldRef.current = true;
+    setShieldOn(true);
+  }
 
   const round = rounds[roundIndex];
   // An image on either side → identification; native↔English → translation.
@@ -563,6 +589,20 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
           k.y += k.vy * mult * dt;
           if (k.x < -8) k.x = 108; else if (k.x > 108) k.x = -8;
           if (k.y < -8) k.y = 108; else if (k.y > 108) k.y = -8;
+        } else if (k.deflected) {
+          // Bounced off the force field: keep flying that straight line (no
+          // homing, no clamp) until offscreen, wrap to the far side, then come
+          // back in aimed at the ship again.
+          k.x += k.vx * mult * dt;
+          k.y += k.vy * mult * dt;
+          if (k.x < -8 || k.x > 108 || k.y < -8 || k.y > 108) {
+            if (k.x < -8) k.x = 108; else if (k.x > 108) k.x = -8;
+            if (k.y < -8) k.y = 108; else if (k.y > 108) k.y = -8;
+            const nd = Math.hypot(SHIP_X - k.x, SHIP_Y - k.y) || 1;
+            k.vx = ((SHIP_X - k.x) / nd) * k.spd;
+            k.vy = ((SHIP_Y - k.y) / nd) * k.spd;
+            k.deflected = false;
+          }
         } else {
           // Choice rocks steer toward the ship from wherever they are: nudge
           // velocity toward "straight at the ship at cruising speed" at
@@ -572,9 +612,34 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
           k.x = clamp(k.x + k.vx * mult * dt, 4, 96);
           k.y = clamp(k.y + k.vy * mult * dt, 4, 96);
         }
-        // Ship collision (px-space): ram → hull damage, rock flung radially away.
         const dx = ((k.x - SHIP_X) / 100) * w;
         const dy = ((k.y - SHIP_Y) / 100) * h;
+        // Force field (px-space): while held, an inbound rock reflects off the
+        // field — true bounce, velocity mirrored about the surface normal — and
+        // sails away on that line instead of homing.
+        if (shieldRef.current) {
+          const fieldReach = k.rPx + SHIELD_RADIUS_PX;
+          if (dx * dx + dy * dy < fieldReach * fieldReach) {
+            const d = Math.hypot(dx, dy) || 1;
+            const nx = dx / d;
+            const ny = dy / d;
+            const vxPx = (k.vx / 100) * w;
+            const vyPx = (k.vy / 100) * h;
+            const dot = vxPx * nx + vyPx * ny;
+            if (dot < 0) {
+              k.vx = ((vxPx - 2 * dot * nx) / w) * 100;
+              k.vy = ((vyPx - 2 * dot * ny) / h) * 100;
+              if (!k.decoy) k.deflected = true;
+            }
+            // Park it on the field's surface so it can't tunnel through.
+            k.x = SHIP_X + ((nx * fieldReach) / w) * 100;
+            k.y = SHIP_Y + ((ny * fieldReach) / h) * 100;
+            const el2 = rockEls.current.get(id);
+            if (el2) { el2.style.left = `${k.x}%`; el2.style.top = `${k.y}%`; }
+            continue;
+          }
+        }
+        // Ship collision (px-space): ram → hull damage, rock flung radially away.
         const reach = k.rPx + SHIP_RADIUS_PX;
         if (dx * dx + dy * dy < reach * reach) {
           k.x = clamp(k.x - (ox / od) * KNOCKBACK_PCT, 4, 96);
@@ -843,6 +908,24 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
           </svg>
         ))}
 
+        {/* Hold the ship (mouse down / finger down) to raise the force field;
+            it drops on release. The ring renders only while the field is up. */}
+        <button
+          type="button"
+          className="ast-shield-hit"
+          style={{ left: `${SHIP_X}%`, top: `${SHIP_Y}%` }}
+          tabIndex={-1}
+          aria-hidden="true"
+          onPointerDown={raiseShield}
+          onContextMenu={(e) => e.preventDefault()}
+        />
+        {shieldOn && (
+          <div
+            className="ast-shield"
+            style={{ left: `${SHIP_X}%`, top: `${SHIP_Y}%`, width: SHIELD_RADIUS_PX * 2, height: SHIELD_RADIUS_PX * 2 }}
+            aria-hidden="true"
+          />
+        )}
         <div
           className={`ast-ship${shipHit ? ' hit' : ''}`}
           style={{ left: `${SHIP_X}%`, top: `${SHIP_Y}%`, transform: `translate(-50%, -50%) rotate(${aimDeg}deg)` }}
