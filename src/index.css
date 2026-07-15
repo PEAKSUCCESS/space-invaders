@@ -1065,12 +1065,17 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
 .alien-orb { animation: alien-orb-pulse 1.6s ease-in-out infinite; }
 @keyframes alien-orb-pulse { 50% { opacity: 0.35; } }
 
-/* Passing traffic — the PeakESL cruiser and stray rockets. The outer span
-   travels (translate animation); the inner span holds heading/flip. */
+/* Passing traffic — the PeakESL cruiser and stray rockets. The outer button
+   travels (translate animation); the inner span holds heading/flip. Clickable
+   scenery: rockets explode, the cruiser shows the PeakESL card. */
 .ast-flyby {
-  position: absolute; z-index: 2; pointer-events: none;
+  position: absolute; z-index: 2; cursor: pointer;
+  background: none; border: none; padding: 0; margin: 0;
+  -webkit-tap-highlight-color: transparent;
   animation: ast-flyby-move var(--dur, 8s) linear forwards;
 }
+.ast-flyby:hover .ast-cruiser-svg,
+.ast-flyby:hover .ast-rocket-svg { filter: drop-shadow(0 0 10px rgba(200, 230, 255, 0.85)); }
 @keyframes ast-flyby-move {
   from { transform: translate(-50%, -50%); }
   to { transform: translate(calc(var(--dx) - 50%), calc(var(--dy) - 50%)); }
@@ -1078,6 +1083,19 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
 .ast-flyby-inner { display: block; }
 .ast-cruiser-svg { width: 150px; height: 50px; display: block; overflow: visible; filter: drop-shadow(0 0 8px rgba(140, 200, 255, 0.35)); }
 .ast-rocket-svg { width: 58px; height: 24px; display: block; overflow: visible; filter: drop-shadow(0 0 5px rgba(200, 230, 255, 0.4)); }
+
+/* The cruiser popup: the same ship shape, larger, centred; auto-dismisses. */
+.ast-cruiser-popup {
+  position: absolute; left: 50%; top: 38%; z-index: 12; pointer-events: none;
+  width: min(80%, 540px);
+  transform: translate(-50%, -50%);
+  animation: cruiser-pop 0.25s ease-out;
+  filter: drop-shadow(0 0 26px rgba(140, 200, 255, 0.55));
+}
+.ast-cruiser-popup .ast-cruiser-svg { width: 100%; height: auto; }
+@keyframes cruiser-pop {
+  from { transform: translate(-50%, -50%) scale(0.55); opacity: 0; }
+}
 
 /* Hull gone — game over. */
 .ast-over {

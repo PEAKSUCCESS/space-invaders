@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from 'react';
 import type { AnswerMode, ApiWord, AvatarId, LanguageCode } from '../types';
 import type { ChoiceKind, ClimbRound } from '../game/lesson';
 import type { GameConfig } from '../lib/gameConfig';
@@ -250,11 +250,14 @@ let flybySeq = 0;
 
 function makeCruiser(w: number): Flyby {
   const ltr = Math.random() < 0.5;
+  // Cruise in a lane above or below the centre band, so the flight path never
+  // crosses the player's ship (which sits at 50/50).
+  const y = Math.random() < 0.5 ? 9 + Math.random() * 26 : 64 + Math.random() * 18;
   return {
     id: ++flybySeq,
     kind: 'cruiser',
     x: ltr ? -14 : 114,
-    y: 10 + Math.random() * 55,
+    y,
     dxPx: (ltr ? 1.28 : -1.28) * w,
     dyPx: 0,
     dur: 9 + Math.random() * 5,
@@ -277,7 +280,7 @@ function makeRocket(w: number, h: number): Flyby {
     id: ++flybySeq,
     kind: 'rocket',
     x: x1, y: y1, dxPx, dyPx,
-    dur: 2.6 + Math.random() * 2.4,
+    dur: 3.25 + Math.random() * 3, // 20% slower than the first cut (duration ×1.25)
     deg: Math.atan2(dyPx, dxPx) * (180 / Math.PI),
     flip: false,
   };
@@ -286,7 +289,9 @@ function makeRocket(w: number, h: number): Flyby {
 // A long-haul cruiser in side profile — dome cockpit, twin engine glow, and the
 // PeakESL logo across the hull. When the whole ship is mirrored for a
 // right-to-left pass, the logo is counter-mirrored so the wordmark stays readable.
-function CruiserSvg({ flip = false }: { flip?: boolean }) {
+// With `slogan`, the hull instead carries the logo + "Speech is Power" line —
+// used by the click popup (the same cruiser shape, larger).
+function CruiserSvg({ flip = false, slogan = false }: { flip?: boolean; slogan?: boolean }) {
   return (
     <svg viewBox="0 0 180 60" className="ast-cruiser-svg" aria-hidden="true">
       {/* engine flames */}
@@ -300,7 +305,16 @@ function CruiserSvg({ flip = false }: { flip?: boolean }) {
       {/* cockpit dome */}
       <path d="M132 13 Q 145 1 160 12 Z" fill="#9fd8ff" stroke="#c9d8ea" strokeWidth="2" strokeLinejoin="round" opacity="0.9" />
       {/* the PeakESL logo across the hull (white wordmark — made for dark hulls) */}
-      <image href="/peak_logo.png" x="48" y="21" width="96" height="17" transform={flip ? 'scale(-1 1) translate(-192 0)' : undefined} />
+      {slogan ? (
+        <>
+          <image href="/peak_logo.png" x="56" y="16" width="80" height="14" />
+          <text x="96" y="41" textAnchor="middle" fontSize="9.5" fontWeight="800" fontStyle="italic" fill="#ffd9a0" fontFamily="inherit">
+            Speech is Power
+          </text>
+        </>
+      ) : (
+        <image href="/peak_logo.png" x="48" y="21" width="96" height="17" transform={flip ? 'scale(-1 1) translate(-192 0)' : undefined} />
+      )}
       {/* running lights */}
       <circle cx="30" cy="30" r="1.8" fill="#7ef29a" className="alien-orb" />
       <circle cx="168" cy="30" r="1.8" fill="#ff8a5a" className="alien-orb" />
@@ -354,6 +368,9 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
   const [yipeeOpen, setYipeeOpen] = useState(false);
   // Decorative traffic passing through the scene (cruiser + rockets).
   const [flybys, setFlybys] = useState<Flyby[]>([]);
+  // Clicking the cruiser shows a 2s "Speech is Power" card (cruiser-shaped, larger).
+  const [cruiserPopup, setCruiserPopup] = useState(false);
+  const popupTimerRef = useRef(0);
 
   const resolvedRef = useRef(false);   // current wave settled (correct rock destroyed)
   const answeredRef = useRef(false);   // first shot graded to the API
@@ -588,6 +605,28 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
     }
   }
 
+  // Traffic is clickable scenery: a rocket explodes into shards where it was
+  // clicked; the cruiser shows the PeakESL "Speech is Power" popup for 2 seconds.
+  function clickFlyby(f: Flyby, e: MouseEvent<HTMLButtonElement>) {
+    if (f.kind === 'rocket') {
+      const scene = sceneRef.current?.getBoundingClientRect();
+      const el = e.currentTarget.getBoundingClientRect();
+      if (scene && scene.width > 0) {
+        const x = ((el.x + el.width / 2 - scene.x) / scene.width) * 100;
+        const y = ((el.y + el.height / 2 - scene.y) / scene.height) * 100;
+        const batch = makeShards(x, y, 0.55);
+        const ids = new Set(batch.map((d) => d.id));
+        setShards((d) => [...d, ...batch]);
+        window.setTimeout(() => setShards((d) => d.filter((p) => !ids.has(p.id))), 4200);
+      }
+      setFlybys((fl) => fl.filter((x) => x.id !== f.id));
+    } else {
+      setCruiserPopup(true);
+      window.clearTimeout(popupTimerRef.current);
+      popupTimerRef.current = window.setTimeout(() => setCruiserPopup(false), 2000);
+    }
+  }
+
   function foundPineapple() {
     if (pineappleFound) return;
     setPineappleFound(true); // gone for the rest of the game
@@ -639,19 +678,30 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
       <div className={`ast-scene${shipHit ? ' rumble' : ''}`} ref={sceneRef}>
         <div className="ast-stars" aria-hidden="true" />
 
-        {/* Passing traffic — behind the rocks, purely decorative. */}
+        {/* Passing traffic — behind the rocks; clickable scenery (rockets pop,
+            the cruiser shows the PeakESL card). */}
         {flybys.map((f) => (
-          <span
+          <button
             key={f.id}
+            type="button"
             className={`ast-flyby ${f.kind}`}
             style={{ left: `${f.x}%`, top: `${f.y}%`, '--dx': `${f.dxPx}px`, '--dy': `${f.dyPx}px`, '--dur': `${f.dur}s` } as CSSProperties}
+            tabIndex={-1}
             aria-hidden="true"
+            onClick={(e) => clickFlyby(f, e)}
           >
             <span className="ast-flyby-inner" style={{ transform: f.kind === 'rocket' ? `rotate(${f.deg}deg)` : f.flip ? 'scaleX(-1)' : undefined }}>
               {f.kind === 'cruiser' ? <CruiserSvg flip={f.flip} /> : <RocketSvg />}
             </span>
-          </span>
+          </button>
         ))}
+
+        {/* PeakESL cruiser popup — the same ship shape, larger, 2 seconds. */}
+        {cruiserPopup && (
+          <div className="ast-cruiser-popup" aria-hidden="true">
+            <CruiserSvg slogan />
+          </div>
+        )}
 
         {/* Ship health — always visible, top-left. */}
         <div className="ast-hull" role="meter" aria-valuemin={0} aria-valuemax={MAX_HULL} aria-valuenow={hull} aria-label={t('ast.hull')}>
