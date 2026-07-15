@@ -7,7 +7,6 @@ import { pickN, shuffle } from '../lib/shuffle';
 import { speakAvatar } from '../lib/speech';
 import { playCorrect } from '../lib/sound';
 import { CountdownDial } from './CountdownDial';
-import { Pineapple } from './ClimbToSafety';
 import { t } from '../i18n/i18n';
 
 interface Props {
@@ -205,6 +204,126 @@ function rollPineapple(chance: number): { left: number; top: number } | null {
   return { left: 6 + Math.random() * 84, top: 26 + Math.random() * 42 };
 }
 
+// The pineapple, abducted: green-skinned, three black alien eyes, and a pair of
+// glowing antennae — but still unmistakably a pineapple.
+function AlienPineapple() {
+  return (
+    <svg viewBox="0 0 40 72" className="pineapple-svg alien" aria-hidden="true">
+      {/* antennae with glowing orbs */}
+      <g stroke="#7ef29a" strokeWidth="1.7" fill="none" strokeLinecap="round">
+        <path d="M14 14 Q 9 8 7 4" />
+        <path d="M26 14 Q 31 8 33 4" />
+      </g>
+      <circle cx="7" cy="4" r="2.6" fill="#b6ffc9" className="alien-orb" />
+      <circle cx="33" cy="4" r="2.6" fill="#b6ffc9" className="alien-orb" />
+      {/* crown of leaves */}
+      <g fill="#3d9e4c" transform="translate(0 10)">
+        <path d="M20 22 L7 8 L17 16 Z" fill="#2f8a3e" />
+        <path d="M20 22 L33 8 L23 16 Z" fill="#2f8a3e" />
+        <path d="M20 22 L12 2 L19 13 Z" />
+        <path d="M20 22 L28 2 L21 13 Z" />
+        <path d="M20 22 L20 0 L22.5 12 Z" fill="#2f8a3e" />
+      </g>
+      {/* body — little green pineapple + crosshatch skin */}
+      <ellipse cx="20" cy="50" rx="14" ry="19" fill="#8fd94c" />
+      <g stroke="#5da32e" strokeWidth="1.4" opacity="0.85" fill="none">
+        <path d="M9 38 L33 58" /><path d="M7 46 L31 65" /><path d="M8 55 L26 68" /><path d="M13 33 L34 50" />
+        <path d="M31 38 L7 58" /><path d="M33 46 L9 65" /><path d="M32 55 L14 68" /><path d="M27 33 L6 50" />
+      </g>
+      {/* three big alien eyes + a tiny mouth */}
+      <ellipse cx="14" cy="46" rx="3.1" ry="4.5" fill="#0c2b12" />
+      <ellipse cx="26" cy="46" rx="3.1" ry="4.5" fill="#0c2b12" />
+      <ellipse cx="20" cy="52.5" rx="2.3" ry="3.3" fill="#0c2b12" />
+      <circle cx="15" cy="44.4" r="0.9" fill="#d9ffe3" />
+      <circle cx="27" cy="44.4" r="0.9" fill="#d9ffe3" />
+      <circle cx="20.8" cy="51.2" r="0.7" fill="#d9ffe3" />
+      <path d="M17 59 Q 20 61.5 23 59" stroke="#0c2b12" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Decorative flybys: the PeakESL cruiser gliding past now and then, and small
+// rockets zipping through in random directions. Pure scenery — behind the rocks,
+// no pointer events, no effect on play.
+interface Flyby { id: number; kind: 'cruiser' | 'rocket'; x: number; y: number; dxPx: number; dyPx: number; dur: number; deg: number; flip: boolean; }
+let flybySeq = 0;
+
+function makeCruiser(w: number): Flyby {
+  const ltr = Math.random() < 0.5;
+  return {
+    id: ++flybySeq,
+    kind: 'cruiser',
+    x: ltr ? -14 : 114,
+    y: 10 + Math.random() * 55,
+    dxPx: (ltr ? 1.28 : -1.28) * w,
+    dyPx: 0,
+    dur: 9 + Math.random() * 5,
+    deg: 0,
+    flip: !ltr,
+  };
+}
+
+function makeRocket(w: number, h: number): Flyby {
+  // Any direction: enter just outside a random edge, exit out the far side.
+  const a = Math.random() * Math.PI * 2;
+  const x1 = 50 + Math.cos(a) * 68;
+  const y1 = 50 + Math.sin(a) * 68;
+  const jig = (Math.random() - 0.5) * 50; // lateral offset so paths vary
+  const x2 = 50 - Math.cos(a) * 68 + Math.sin(a) * jig;
+  const y2 = 50 - Math.sin(a) * 68 - Math.cos(a) * jig;
+  const dxPx = ((x2 - x1) / 100) * w;
+  const dyPx = ((y2 - y1) / 100) * h;
+  return {
+    id: ++flybySeq,
+    kind: 'rocket',
+    x: x1, y: y1, dxPx, dyPx,
+    dur: 2.6 + Math.random() * 2.4,
+    deg: Math.atan2(dyPx, dxPx) * (180 / Math.PI),
+    flip: false,
+  };
+}
+
+// A long-haul cruiser in side profile — dome cockpit, twin engine glow, and the
+// PeakESL logo across the hull. When the whole ship is mirrored for a
+// right-to-left pass, the logo is counter-mirrored so the wordmark stays readable.
+function CruiserSvg({ flip = false }: { flip?: boolean }) {
+  return (
+    <svg viewBox="0 0 180 60" className="ast-cruiser-svg" aria-hidden="true">
+      {/* engine flames */}
+      <polygon className="ast-flame" points="14,26 -2,30 14,34" fill="#ffa73a" stroke="#ffd9a0" strokeWidth="1" />
+      <polygon className="ast-flame" points="16,38 4,41 16,44" fill="#ffa73a" stroke="#ffd9a0" strokeWidth="1" />
+      {/* tail fin */}
+      <path d="M18 30 L6 10 L34 22 Z" fill="#141b33" stroke="#9fb4cc" strokeWidth="2" strokeLinejoin="round" />
+      {/* hull */}
+      <path d="M14 30 Q 20 16 58 13 L 130 13 Q 168 17 176 30 Q 168 43 130 47 L 58 47 Q 20 44 14 30 Z"
+        fill="#0e1430" stroke="#c9d8ea" strokeWidth="2.5" strokeLinejoin="round" />
+      {/* cockpit dome */}
+      <path d="M132 13 Q 145 1 160 12 Z" fill="#9fd8ff" stroke="#c9d8ea" strokeWidth="2" strokeLinejoin="round" opacity="0.9" />
+      {/* the PeakESL logo across the hull (white wordmark — made for dark hulls) */}
+      <image href="/peak_logo.png" x="48" y="21" width="96" height="17" transform={flip ? 'scale(-1 1) translate(-192 0)' : undefined} />
+      {/* running lights */}
+      <circle cx="30" cy="30" r="1.8" fill="#7ef29a" className="alien-orb" />
+      <circle cx="168" cy="30" r="1.8" fill="#ff8a5a" className="alien-orb" />
+    </svg>
+  );
+}
+
+// A small rocket drawn nose-right; the flyby wrapper rotates it to its heading.
+function RocketSvg() {
+  return (
+    <svg viewBox="0 0 64 26" className="ast-rocket-svg" aria-hidden="true">
+      <polygon className="ast-flame" points="12,13 -2,9 3,13 -2,17" fill="#ffa73a" stroke="#ffd9a0" strokeWidth="0.8" />
+      {/* fins */}
+      <path d="M14 13 L8 3 L24 9 Z" fill="#c34a4a" stroke="#802f2f" strokeWidth="1" strokeLinejoin="round" />
+      <path d="M14 13 L8 23 L24 17 Z" fill="#c34a4a" stroke="#802f2f" strokeWidth="1" strokeLinejoin="round" />
+      {/* body + nose cone */}
+      <path d="M14 13 Q 16 6 34 6 L 46 6 Q 58 9 62 13 Q 58 17 46 20 L 34 20 Q 16 20 14 13 Z"
+        fill="#dfe9f5" stroke="#52616c" strokeWidth="1.6" strokeLinejoin="round" />
+      <circle cx="38" cy="13" r="3.4" fill="#9fd8ff" stroke="#52616c" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
 // The classic Atari wedge — a white outline ship with a flickering thruster.
 function ShipSvg() {
   return (
@@ -233,6 +352,8 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
   const [pineapple] = useState(() => rollPineapple(pineappleChance));
   const [pineappleFound, setPineappleFound] = useState(false);
   const [yipeeOpen, setYipeeOpen] = useState(false);
+  // Decorative traffic passing through the scene (cruiser + rockets).
+  const [flybys, setFlybys] = useState<Flyby[]>([]);
 
   const resolvedRef = useRef(false);   // current wave settled (correct rock destroyed)
   const answeredRef = useRef(false);   // first shot graded to the API
@@ -295,6 +416,35 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
     advancingRef.current = false;
     firingRef.current = false;
   }, [rocks]);
+
+  // Occasional decorative traffic: the PeakESL cruiser glides past every so
+  // often, and rockets zip through in varying directions a bit more frequently.
+  // Each flyby removes itself when its crossing finishes.
+  useEffect(() => {
+    let alive = true;
+    const timers: number[] = [];
+    function launch(make: (w: number, h: number) => Flyby, reschedule: () => void) {
+      if (!alive) return;
+      const { w, h } = sceneSizeRef.current;
+      const fb = make(w, h);
+      setFlybys((f) => [...f, fb]);
+      timers.push(window.setTimeout(() => setFlybys((f) => f.filter((x) => x.id !== fb.id)), fb.dur * 1000 + 400));
+      reschedule();
+    }
+    const scheduleCruiser = () => {
+      timers.push(window.setTimeout(() => launch(makeCruiser, scheduleCruiser), 12000 + Math.random() * 18000));
+    };
+    const scheduleRocket = () => {
+      timers.push(window.setTimeout(() => launch(makeRocket, scheduleRocket), 5000 + Math.random() * 9000));
+    };
+    // First appearances early enough to be seen within a normal game.
+    timers.push(window.setTimeout(() => launch(makeCruiser, scheduleCruiser), 4000 + Math.random() * 4000));
+    timers.push(window.setTimeout(() => launch(makeRocket, scheduleRocket), 2000 + Math.random() * 3000));
+    return () => {
+      alive = false;
+      timers.forEach((t) => window.clearTimeout(t));
+    };
+  }, []);
 
   // An asteroid rammed the ship: degrade the hull (hot rocks hit twice as hard),
   // flash/shake, and end the game when the hull is gone. Declared before the
@@ -489,6 +639,20 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
       <div className={`ast-scene${shipHit ? ' rumble' : ''}`} ref={sceneRef}>
         <div className="ast-stars" aria-hidden="true" />
 
+        {/* Passing traffic — behind the rocks, purely decorative. */}
+        {flybys.map((f) => (
+          <span
+            key={f.id}
+            className={`ast-flyby ${f.kind}`}
+            style={{ left: `${f.x}%`, top: `${f.y}%`, '--dx': `${f.dxPx}px`, '--dy': `${f.dyPx}px`, '--dur': `${f.dur}s` } as CSSProperties}
+            aria-hidden="true"
+          >
+            <span className="ast-flyby-inner" style={{ transform: f.kind === 'rocket' ? `rotate(${f.deg}deg)` : f.flip ? 'scaleX(-1)' : undefined }}>
+              {f.kind === 'cruiser' ? <CruiserSvg flip={f.flip} /> : <RocketSvg />}
+            </span>
+          </span>
+        ))}
+
         {/* Ship health — always visible, top-left. */}
         <div className="ast-hull" role="meter" aria-valuemin={0} aria-valuemax={MAX_HULL} aria-valuenow={hull} aria-label={t('ast.hull')}>
           <span className="ast-hull-label">{t('ast.hull')}</span>
@@ -574,7 +738,7 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
             onClick={foundPineapple}
             aria-hidden="true"
           >
-            <Pineapple />
+            <AlienPineapple />
           </button>
         )}
 

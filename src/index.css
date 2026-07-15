@@ -1051,15 +1051,33 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
   100% { opacity: 0; transform: translate(calc(var(--dx) - 50%), calc(var(--dy) - 50%)) rotate(320deg); }
 }
 
-/* The pineapple, adrift in deep space this time. */
+/* The alien pineapple, adrift in deep space — soft green glow, bobbing. */
 .ast-pineapple {
-  position: absolute; width: 30px; height: 47px; z-index: 5;
+  position: absolute; width: 32px; height: 56px; z-index: 5;
   background: none; border: none; padding: 0; cursor: pointer;
-  animation: ast-float 6s ease-in-out infinite; opacity: 0.92;
+  animation: ast-float 6s ease-in-out infinite; opacity: 0.94;
   -webkit-tap-highlight-color: transparent;
+  filter: drop-shadow(0 0 7px rgba(126, 242, 154, 0.65));
 }
 .ast-pineapple .pineapple-svg { width: 100%; height: 100%; }
 @keyframes ast-float { 50% { transform: translateY(-10px) rotate(8deg); } }
+/* Antenna orbs (and ship running lights) softly pulse. */
+.alien-orb { animation: alien-orb-pulse 1.6s ease-in-out infinite; }
+@keyframes alien-orb-pulse { 50% { opacity: 0.35; } }
+
+/* Passing traffic — the PeakESL cruiser and stray rockets. The outer span
+   travels (translate animation); the inner span holds heading/flip. */
+.ast-flyby {
+  position: absolute; z-index: 2; pointer-events: none;
+  animation: ast-flyby-move var(--dur, 8s) linear forwards;
+}
+@keyframes ast-flyby-move {
+  from { transform: translate(-50%, -50%); }
+  to { transform: translate(calc(var(--dx) - 50%), calc(var(--dy) - 50%)); }
+}
+.ast-flyby-inner { display: block; }
+.ast-cruiser-svg { width: 150px; height: 50px; display: block; overflow: visible; filter: drop-shadow(0 0 8px rgba(140, 200, 255, 0.35)); }
+.ast-rocket-svg { width: 58px; height: 24px; display: block; overflow: visible; filter: drop-shadow(0 0 5px rgba(200, 230, 255, 0.4)); }
 
 /* Hull gone — game over. */
 .ast-over {
