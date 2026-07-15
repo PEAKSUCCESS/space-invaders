@@ -31,26 +31,27 @@ interface Props {
 const CHOICE_COUNT = 4;          // asteroids per wave (1 correct + distractors)
 const ADVANCE_DELAY_MS = 900;    // watch the debris scatter before the next wave
 
-// Threat model: asteroids drift down toward the ship at the bottom; shooting the
-// correct one clears the wave, a wrong shot turns that rock GLOWING HOT (faster,
-// hits twice as hard). A rock that reaches the ship rams it — hull damage — and
-// is flung back to the top to come around again. Hull 0 → ship destroyed; clear
-// all waves to survive. The config's waterRisePerSec doubles as the speed knob
-// here (scaled against its own default) so the same runtime config tunes both games.
+// Threat model: asteroids close in on the ship at the CENTRE of the screen from
+// all directions; shooting the correct one clears the wave, a wrong shot turns
+// that rock GLOWING HOT (faster, hits twice as hard). A rock that reaches the
+// ship rams it — hull damage — and is flung radially away to come around again.
+// Hull 0 → ship destroyed; clear all waves to survive. The config's
+// waterRisePerSec doubles as the speed knob here (scaled against its own
+// default) so the same runtime config tunes both games.
 const MAX_HULL = 100;
 const HIT_DAMAGE = 15;           // normal asteroid ramming the ship
 const HOT_DAMAGE = 30;           // a glowing-hot rock hits twice as hard
-const HOT_SPEED_MULT = 1.9;      // …and falls almost twice as fast
-const DRIFT_PER_SEC = 2.1;       // baseline downward drift (% of scene height / sec)
+const HOT_SPEED_MULT = 1.9;      // …and closes in almost twice as fast
+const DRIFT_PER_SEC = 2.6;       // baseline closing speed (%/sec) — 25% up from the bottom-ship build
 const BASE_RISE = 0.9;           // gameConfig.waterRisePerSec default → speed scale of 1
-const KNOCKBACK_PCT = 34;        // how far up (%) a rock is flung after ramming the ship
-const HOMING_ACCEL = 8;          // %/s² — how hard a rock steers onto an intercept course
-const MAX_VX = 14;               // %/s — cap on sideways speed from homing
+const KNOCKBACK_PCT = 34;        // how far (%) a rock is flung away after ramming the ship
+const HOMING_ACCEL = 8;          // %/s² — how hard a rock steers back onto the ship
 const BULLET_MS = 150;           // bullet flight time; the shot resolves on impact
 const SHIP_X = 50;               // ship centre, % of scene width
-const SHIP_Y = 88;               // ship centre, % of scene height (from the top)
+const SHIP_Y = 50;               // ship centre, % of scene height — dead centre
 const SHIP_RADIUS_PX = 30;       // collision radius around the ship centre
-const PARTICLE_COUNT = 16;       // debris flecks per destroyed asteroid
+const SHARD_COUNT = 8;           // mini-asteroid shards per destroyed rock
+const DECOY_COUNT = 3;           // unlabeled rocks per wave — shootable space junk
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
@@ -63,6 +64,7 @@ function nativeOf(w: ApiWord, language: LanguageCode): string | undefined {
 interface RockDef {
   id: string;
   correct: boolean;
+  decoy?: boolean;   // unlabeled rock — shootable, never graded, never the answer
   label?: string;
   img?: string;
   sizePx: number;      // button diameter (also the collision size)
@@ -71,14 +73,15 @@ interface RockDef {
   reverse: boolean;    // spin direction
   x0: number; y0: number;    // spawn centre, % of scene
   vx0: number; vy0: number;  // velocity, %/sec
+  spd: number;               // this rock's cruising speed, %/sec
 }
-interface Kin { x: number; y: number; vx: number; vy: number; rPx: number; }
+interface Kin { x: number; y: number; vx: number; vy: number; spd: number; rPx: number; decoy?: boolean; }
 
-interface Debris { id: number; x: number; y: number; dx: number; dy: number; dur: number; size: number; }
+// A destroyed rock's shards — small jagged asteroids flung outward, drifting off.
+interface Shard { id: number; x: number; y: number; dx: number; dy: number; dur: number; size: number; points: string; }
 
-// A classic Atari-style jagged rock outline: 11 vertices at randomised radii.
-function makeRockPoints(): string {
-  const n = 11;
+// A classic Atari-style jagged rock outline: n vertices at randomised radii.
+function makeRockPoints(n = 11): string {
   const pts: string[] = [];
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2;
@@ -91,7 +94,7 @@ function makeRockPoints(): string {
 // Module-level (Math.random outside render, same convention as buildChoices in
 // ClimbToSafety). The correct choice is the target rendered in the wave's choice
 // modality; distractors are distinct pool words. Each choice becomes an asteroid
-// spawned in its own horizontal lane near the top, drifting down at the ship.
+// spawned on its own edge of the screen (all four sides), closing on the ship.
 function buildRocks(
   target: ApiWord, choiceKind: ChoiceKind, pool: ApiWord[], language: LanguageCode, keyPrefix: string,
 ): RockDef[] {
@@ -126,34 +129,71 @@ function buildRocks(
     }
   }
   const choices = shuffle([correct, ...pickN(distractors, CHOICE_COUNT - 1)]);
-  const span = 76 / Math.max(1, choices.length - 1);
-  return choices.map((c, i) => ({
+  const sides = shuffle(['top', 'right', 'bottom', 'left']);
+  // Spawn a rock on a screen edge, at a random spot along it, aimed at the ship.
+  const spawn = (side: string, spd: number) => {
+    const along = 12 + Math.random() * 76;
+    const x0 = side === 'left' ? 7 : side === 'right' ? 93 : along;
+    const y0 = side === 'top' ? 7 : side === 'bottom' ? 93 : along;
+    const d = Math.hypot(SHIP_X - x0, SHIP_Y - y0) || 1;
+    return { x0, y0, vx0: ((SHIP_X - x0) / d) * spd, vy0: ((SHIP_Y - y0) / d) * spd, spd };
+  };
+  const shape = () => ({
+    points: makeRockPoints(),
+    spinDur: 9 + Math.random() * 9, // slow, visible axis spin (one turn / 9–18s)
+    reverse: Math.random() < 0.5,
+  });
+  const labeled: RockDef[] = choices.map((c, i) => ({
     ...c,
     id: `${keyPrefix}:${c.id}`, // unique across waves/retries so DOM refs never collide
     sizePx: c.img ? 96 : 110,
-    points: makeRockPoints(),
-    spinDur: 16 + Math.random() * 16,
-    reverse: Math.random() < 0.5,
-    x0: clamp(12 + span * i + (Math.random() * 8 - 4), 10, 90),
-    y0: 8 + Math.random() * 12,
-    vx0: (Math.random() * 2 - 1) * 3.5,
-    vy0: DRIFT_PER_SEC * (0.8 + Math.random() * 0.5),
+    ...shape(),
+    ...spawn(sides[i % sides.length], DRIFT_PER_SEC * (0.8 + Math.random() * 0.5)),
   }));
+  // Plus a few unlabeled decoys — plain space rocks in varying sizes (always
+  // smaller than the word/picture rocks) that can be shot for the fun of it.
+  // Unlike the choices they DON'T home on the ship: each flies its own straight
+  // line from its edge toward a random waypoint, which may or may not cross the
+  // ship on any given pass (they wrap around the screen, so passes repeat).
+  const decoys: RockDef[] = Array.from({ length: DECOY_COUNT }, (_, i): RockDef => {
+    const side = sides[(choices.length + i) % sides.length];
+    const along = 12 + Math.random() * 76;
+    const x0 = side === 'left' ? 7 : side === 'right' ? 93 : along;
+    const y0 = side === 'top' ? 7 : side === 'bottom' ? 93 : along;
+    const tx = 15 + Math.random() * 70; // random waypoint, not the ship
+    const ty = 15 + Math.random() * 70;
+    const spd = DRIFT_PER_SEC * (0.7 + Math.random() * 0.6);
+    const d = Math.hypot(tx - x0, ty - y0) || 1;
+    return {
+      id: `${keyPrefix}:x-${i}`,
+      correct: false,
+      decoy: true,
+      sizePx: 36 + Math.random() * 54,
+      ...shape(),
+      x0, y0,
+      vx0: ((tx - x0) / d) * spd,
+      vy0: ((ty - y0) / d) * spd,
+      spd,
+    };
+  });
+  return [...labeled, ...decoys];
 }
 
-let debrisSeq = 0;
-// The kill burst: flecks flung outward that keep floating off through space.
-function makeDebris(x: number, y: number): Debris[] {
-  return Array.from({ length: PARTICLE_COUNT }, () => {
-    const a = Math.random() * Math.PI * 2;
-    const dist = 50 + Math.random() * 130;
+let shardSeq = 0;
+// The kill burst: the rock breaks into SHARD_COUNT small asteroids — each its
+// own jagged outline — flung outward in a ring, floating off through space.
+function makeShards(x: number, y: number, scale = 1): Shard[] {
+  return Array.from({ length: SHARD_COUNT }, (_, i) => {
+    const a = ((i + Math.random() * 0.7) / SHARD_COUNT) * Math.PI * 2; // spread round the ring
+    const dist = 60 + Math.random() * 140;
     return {
-      id: ++debrisSeq,
+      id: ++shardSeq,
       x, y,
       dx: Math.cos(a) * dist,
       dy: Math.sin(a) * dist,
-      dur: 1.8 + Math.random() * 1.6,
-      size: 2 + Math.random() * 3.5,
+      dur: 2.2 + Math.random() * 1.6,
+      size: (12 + Math.random() * 12) * scale,
+      points: makeRockPoints(7),
     };
   });
 }
@@ -187,7 +227,7 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
   const [status, setStatus] = useState<Record<string, 'hot' | 'dead'>>({});
   const [aimDeg, setAimDeg] = useState(0);
   const [bullet, setBullet] = useState<{ key: number; dx: number; dy: number } | null>(null);
-  const [debris, setDebris] = useState<Debris[]>([]);
+  const [shards, setShards] = useState<Shard[]>([]);
   const [shipHit, setShipHit] = useState(false);
   // Hidden pineapple: rolled once per game (survives retries — at most one find).
   const [pineapple] = useState(() => rollPineapple(pineappleChance));
@@ -245,7 +285,7 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
   // Rock ids are unique per wave (`${runId}-${roundIndex}:…`), so the `status`
   // map needs no reset — entries for past waves are simply never looked up.
   useEffect(() => {
-    kinRef.current = new Map(rocks.map((r) => [r.id, { x: r.x0, y: r.y0, vx: r.vx0, vy: r.vy0, rPx: r.sizePx * 0.44 }]));
+    kinRef.current = new Map(rocks.map((r) => [r.id, { x: r.x0, y: r.y0, vx: r.vx0, vy: r.vy0, spd: r.spd, rPx: r.sizePx * 0.44, decoy: r.decoy }]));
     for (const [id, k] of kinRef.current) {
       const el = rockEls.current.get(id);
       if (el) { el.style.left = `${k.x}%`; el.style.top = `${k.y}%`; }
@@ -271,8 +311,8 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
     }
   }
 
-  // The drift loop: rocks fall toward the ship, bounce off the side walls, and
-  // ram the ship on contact (hull damage + flung back to the top). Positions are
+  // The drift loop: rocks close in on the centred ship from all directions and
+  // ram it on contact (hull damage + flung radially away). Positions are
   // written imperatively — no per-frame re-render. rAF's timestamp gives dt.
   useEffect(() => {
     let raf = 0;
@@ -289,25 +329,34 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
       for (const [id, k] of kinRef.current) {
         if (st[id] === 'dead') continue;
         const mult = (st[id] === 'hot' ? HOT_SPEED_MULT : 1) * speedRef.current;
-        // Steer onto an intercept course: the vx that would meet the ship at
-        // impact time, approached at HOMING_ACCEL — so every rock is a threat,
-        // not just the ones that spawned over the ship.
-        if (k.y < SHIP_Y) {
-          const tti = Math.max(0.8, (SHIP_Y - k.y) / (k.vy * mult));
-          const wantVx = clamp((SHIP_X - k.x) / tti, -MAX_VX, MAX_VX);
-          k.vx += clamp(wantVx - k.vx, -HOMING_ACCEL * dt, HOMING_ACCEL * dt);
+        const ox = SHIP_X - k.x;
+        const oy = SHIP_Y - k.y;
+        const od = Math.hypot(ox, oy) || 1;
+        if (k.decoy) {
+          // Decoys fly their own straight line — no homing — and wrap around
+          // the screen edges, Atari-style. A pass may or may not cross the ship.
+          k.x += k.vx * mult * dt;
+          k.y += k.vy * mult * dt;
+          if (k.x < -8) k.x = 108; else if (k.x > 108) k.x = -8;
+          if (k.y < -8) k.y = 108; else if (k.y > 108) k.y = -8;
+        } else {
+          // Choice rocks steer toward the ship from wherever they are: nudge
+          // velocity toward "straight at the ship at cruising speed" at
+          // HOMING_ACCEL — a threat from any direction, including after knockback.
+          k.vx += clamp((ox / od) * k.spd - k.vx, -HOMING_ACCEL * dt, HOMING_ACCEL * dt);
+          k.vy += clamp((oy / od) * k.spd - k.vy, -HOMING_ACCEL * dt, HOMING_ACCEL * dt);
+          k.x = clamp(k.x + k.vx * mult * dt, 4, 96);
+          k.y = clamp(k.y + k.vy * mult * dt, 4, 96);
         }
-        k.x += k.vx * mult * dt;
-        k.y += k.vy * mult * dt;
-        if (k.x < 9) { k.x = 9; k.vx = Math.abs(k.vx); }
-        if (k.x > 91) { k.x = 91; k.vx = -Math.abs(k.vx); }
-        if (k.y > 106) k.y = 4; // slipped past the ship → wrap to the top, Atari-style
-        // Ship collision (px-space): ram → hull damage, rock flung back up top.
+        // Ship collision (px-space): ram → hull damage, rock flung radially away.
         const dx = ((k.x - SHIP_X) / 100) * w;
         const dy = ((k.y - SHIP_Y) / 100) * h;
         const reach = k.rPx + SHIP_RADIUS_PX;
         if (dx * dx + dy * dy < reach * reach) {
-          k.y = Math.max(5, k.y - KNOCKBACK_PCT);
+          k.x = clamp(k.x - (ox / od) * KNOCKBACK_PCT, 4, 96);
+          k.y = clamp(k.y - (oy / od) * KNOCKBACK_PCT, 4, 96);
+          k.vx = -(ox / od) * k.spd; // sail outward, then home back in
+          k.vy = -(oy / od) * k.spd;
           applyRam(st[id] === 'hot');
         }
         const el = rockEls.current.get(id);
@@ -347,6 +396,19 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
     setBullet(null);
     if (gameOverRef.current || resolvedRef.current) return;
 
+    const kd = kinRef.current.get(r.id);
+    // Decoys are just space junk: blast into shards, never graded, wave stays open.
+    if (r.decoy) {
+      setStatus((s) => ({ ...s, [r.id]: 'dead' }));
+      if (kd) {
+        const batch = makeShards(kd.x, kd.y, r.sizePx / 110);
+        const ids = new Set(batch.map((d) => d.id));
+        setShards((d) => [...d, ...batch]);
+        window.setTimeout(() => setShards((d) => d.filter((p) => !ids.has(p.id))), 4200);
+      }
+      return;
+    }
+
     // Grade the first shot of the wave (one answer submitted per word).
     if (!answeredRef.current) {
       onAnswer(round.target.senseId, r.correct, mode);
@@ -356,13 +418,13 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
     const k = kinRef.current.get(r.id);
     if (r.correct) {
       resolvedRef.current = true;
-      advancingRef.current = true; // freeze the field while the debris scatters
+      advancingRef.current = true; // freeze the field while the shards scatter
       setStatus((s) => ({ ...s, [r.id]: 'dead' }));
       if (k) {
-        const batch = makeDebris(k.x, k.y);
+        const batch = makeShards(k.x, k.y);
         const ids = new Set(batch.map((d) => d.id));
-        setDebris((d) => [...d, ...batch]);
-        window.setTimeout(() => setDebris((d) => d.filter((p) => !ids.has(p.id))), 3800);
+        setShards((d) => [...d, ...batch]);
+        window.setTimeout(() => setShards((d) => d.filter((p) => !ids.has(p.id))), 4200);
       }
       if (audio) {
         if (roundIndex + 1 < total) playCorrect(); // final wave's victory trumpet covers it
@@ -397,7 +459,7 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
     gameOverRef.current = false;
     lastTsRef.current = null;
     setHull(MAX_HULL);
-    setDebris([]);
+    setShards([]);
     setGameOver(false);
     setRoundIndex(0);
     setRunId((n) => n + 1); // force a wave respawn even though roundIndex may already be 0
@@ -447,7 +509,7 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
             <button
               key={r.id}
               type="button"
-              className={`ast-rock${r.img ? ' image' : ''}${st === 'hot' ? ' hot' : ''}${r.reverse ? ' rev' : ''}`}
+              className={`ast-rock${r.img ? ' image' : ''}${r.decoy ? ' decoy' : ''}${st === 'hot' ? ' hot' : ''}${r.reverse ? ' rev' : ''}`}
               style={{ width: r.sizePx, height: r.sizePx, '--spin-dur': `${r.spinDur}s` } as CSSProperties}
               disabled={!!st || gameOver}
               ref={(el) => {
@@ -481,16 +543,19 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
           />
         )}
 
-        {debris.map((d) => (
-          <span
+        {shards.map((d) => (
+          <svg
             key={d.id}
-            className="ast-debris"
+            className="ast-shard"
+            viewBox="0 0 100 100"
             style={{
               left: `${d.x}%`, top: `${d.y}%`, width: d.size, height: d.size,
               '--dx': `${d.dx}px`, '--dy': `${d.dy}px`, '--dur': `${d.dur}s`,
             } as CSSProperties}
             aria-hidden="true"
-          />
+          >
+            <polygon points={d.points} />
+          </svg>
         ))}
 
         <div

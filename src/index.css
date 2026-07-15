@@ -991,6 +991,8 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
 @keyframes ast-spin { to { transform: rotate(360deg); } }
 .ast-rock-body polygon { fill: #0b0e1c; stroke: #dfe9f5; stroke-width: 2.5; stroke-linejoin: round; }
 .ast-rock:hover:not(:disabled) .ast-rock-body polygon { stroke: #fff; filter: drop-shadow(0 0 6px rgba(160, 220, 255, 0.85)); }
+/* Unlabeled decoy rocks — plain space junk, slightly dimmer than the choices. */
+.ast-rock.decoy .ast-rock-body polygon { stroke: #9fb0c2; }
 .ast-rock-content {
   position: relative; z-index: 1; pointer-events: none;
   color: #eaf3ff; font-weight: 700; font-size: 15px; line-height: 1.12;
@@ -1033,16 +1035,20 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
   to { transform: translate(calc(var(--dx) - 50%), calc(var(--dy) - 50%)); }
 }
 
-/* Kill debris — flecks flung outward that keep floating off through space. */
-.ast-debris {
-  position: absolute; border-radius: 50%; background: #e8f4ff;
-  box-shadow: 0 0 6px rgba(200, 230, 255, 0.8);
+/* Kill shards — the rock breaks into small jagged asteroids that tumble
+   outward and float off through space, fading as they go. */
+.ast-shard {
+  position: absolute; overflow: visible;
   z-index: 5; pointer-events: none;
-  animation: ast-drift var(--dur, 2.4s) ease-out forwards;
+  animation: ast-drift var(--dur, 2.8s) ease-out forwards;
+}
+.ast-shard polygon {
+  fill: #0b0e1c; stroke: #dfe9f5; stroke-width: 7; stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px rgba(200, 230, 255, 0.55));
 }
 @keyframes ast-drift {
   0% { opacity: 1; transform: translate(-50%, -50%); }
-  100% { opacity: 0; transform: translate(calc(var(--dx) - 50%), calc(var(--dy) - 50%)) rotate(200deg); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) - 50%), calc(var(--dy) - 50%)) rotate(320deg); }
 }
 
 /* The pineapple, adrift in deep space this time. */
