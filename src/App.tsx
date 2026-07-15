@@ -5,7 +5,7 @@ import { MatchingTiles } from './components/MatchingTiles';
 import { HearAndChoose } from './components/HearAndChoose';
 import { TranslateWhatYouHear } from './components/TranslateWhatYouHear';
 import { PickOne } from './components/PickOne';
-import { ClimbToSafety } from './components/ClimbToSafety';
+import { Asteroids } from './components/Asteroids';
 import { LessonComplete } from './components/LessonComplete';
 import { FeedbackModal, type FeedbackContext } from './components/FeedbackModal';
 import { fireConfetti } from './components/effects/Confetti';
@@ -341,8 +341,9 @@ function App() {
         </div>
       </div>
 
+      {/* The climb-round lesson data now plays as the Asteroids space shooter. */}
       {step.kind === 'climb' && (
-        <ClimbToSafety
+        <Asteroids
           key={stepKey}
           rounds={step.rounds}
           pool={lesson.bin}
@@ -410,8 +411,8 @@ function App() {
         />
       )}
 
-      {/* The climb game paces itself (15 rounds, rising water), so it has no
-          per-step Skip/Remove controls — only the topbar Quit. */}
+      {/* The asteroids game paces itself (15 waves, incoming rocks), so it has
+          no per-step Skip/Remove controls — only the topbar Quit. */}
       {step.kind !== 'climb' && (
         <div className="skip-bar">
           <button type="button" className="skip-btn" onClick={onChallengeComplete}>
@@ -469,7 +470,7 @@ function feedbackContextFor(step: LessonStep): FeedbackContext {
 function labelForStep(step: LessonStep): string {
   switch (step.kind) {
     case 'climb':
-      return t('challenge.climb');
+      return t('challenge.asteroids');
     case 'match':
       return t('challenge.match');
     case 'hearchoose':

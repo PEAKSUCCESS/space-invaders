@@ -59,7 +59,7 @@ function rollPineapple(chance: number): { left: number; bottom: number } | null 
   return { left: 6 + Math.random() * 78, bottom: 8 + Math.random() * 60 };
 }
 
-function Pineapple() {
+export function Pineapple() {
   return (
     <svg viewBox="0 0 40 62" className="pineapple-svg" aria-hidden="true">
       {/* crown of leaves */}

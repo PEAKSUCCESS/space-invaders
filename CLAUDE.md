@@ -1,6 +1,6 @@
 # space
 
-**Space** is a Vite + React + TypeScript vocabulary game — a clone of the Survival app (peakvocab-survival) — over the **peakvocab-api** corpus — cloned from the Balloons app (peakvocab-balloons) and reskinned as **"Climb to Safety"** (the main loop; see "The game: Climb to Safety" under What it does). Sibling to (and lighter than) the 3D R3F hiking app.
+**Space** is a Vite + React + TypeScript vocabulary game — a clone of the Survival app (peakvocab-survival) — over the **peakvocab-api** corpus. The main loop is **"Asteroids"**, a retro Atari-style space shooter (see "The game: Asteroids" under What it does); it plays the same lesson data the Survival clone's Climb to Safety used (the climb component is retained, unrendered). Sibling to (and lighter than) the 3D R3F hiking app.
 
 ## Repo boundary (hard rule)
 
@@ -18,11 +18,20 @@ Hitting **Start** builds a **lesson** of `LESSON_LENGTH = 15` word challenges (`
 
 1. `enrollUser({userId, nativeLanguage, avatar, level, areas})` — idempotent; first call auto-fills the 20-word bin. Avatar is lowercased on the wire (`jade`).
 2. `setLevel(userId, level)` then `setAreas(userId, areas)` — apply the start-screen selections (each benches + refills the bin, keeping progress); the `setAreas` response carries the resulting **bin**.
-3. Build the 15 climb rounds from the bin (`buildRounds`) — one self-paced `climb` step (`LessonStep`); see "The game: Climb to Safety".
+3. Build the 15 climb rounds from the bin (`buildRounds`) — one self-paced `climb` step (`LessonStep`); the step is rendered as the **Asteroids** shooter (see next section).
 
-### The game: Climb to Safety
+### The game: Asteroids
 
-The whole lesson is a **single self-paced `climb` step** of `LESSON_LENGTH = 15` rounds, rendered by `src/components/ClimbToSafety.tsx`. The learner is a **hiker climbing a ladder** (a back-view SVG `HikerClimber` in `ClimbToSafety.tsx` — cap + backpack facing the ladder, hands on the rungs, no poles — mimicking the `public/hiker.png` palette) to stay above **water that only ever rises**:
+The single `climb` step's 15 rounds are rendered by `src/components/Asteroids.tsx` as a retro Atari-style shooter on a black starfield. Round structure, clue/choice modes, streak-weighted targets, and first-pick grading are exactly the Climb rules (see the retained section below); what changed is the scene:
+
+- **Layout:** HUD (wave counter + instruction) and the **clue** at the top of a dark panel; the space **scene** below holds 4 drifting **asteroids** (jagged white-outline polygons carrying the choice word or picture), the player's **ship** at bottom centre, a **HULL health bar** (top-left, 100 → 0), and the countdown dial (top-right).
+- **Click an asteroid → the ship aims and fires** (a tracer bullet, `BULLET_MS`). The **correct** rock explodes into ~16 debris flecks that float off through space, the word is spoken, and the wave advances after `ADVANCE_DELAY_MS`. A **wrong** rock survives and goes **glowing hot** — molten orange, `HOT_SPEED_MULT` faster, and twice the ram damage — and can't be shot again; the wave stays open until the correct rock is destroyed.
+- **Asteroids steer onto an intercept course with the ship** (proportional homing, `HOMING_ACCEL`) and bounce off the side walls; one that slips past the bottom wraps back to the top, Atari-style. A rock reaching the ship **rams it**: hull −`HIT_DAMAGE` (15), or −`HOT_DAMAGE` (30) when hot, with a flash + screen rumble; the rock is flung back up `KNOCKBACK_PCT` to come around again. **Hull 0 → "Ship destroyed!"** overlay with Try again (fresh hull, wave 1; answers already submitted still counted). Surviving all 15 waves → `onComplete` → `LessonComplete`.
+- Movement runs in a `requestAnimationFrame` loop that writes rock positions imperatively (no per-frame re-render), pausing while the feedback modal or YIPEE card is open and during the advance gap. The runtime config's **`waterRisePerSec` doubles as the drift-speed knob** here (scaled against its 0.9 default), so the same no-rebuild config tunes this game. Tuning constants sit at the top of `Asteroids.tsx`. The hidden **pineapple** easter egg floats in space (same contract as the climb version).
+
+### Retained: Climb to Safety (not rendered)
+
+The previous main loop (`src/components/ClimbToSafety.tsx`, kept in the tree but no longer rendered by `App`; the rules below still define the round mechanics Asteroids inherits). The learner is a **hiker climbing a ladder** (a back-view SVG `HikerClimber` in `ClimbToSafety.tsx` — cap + backpack facing the ladder, hands on the rungs, no poles — mimicking the `public/hiker.png` palette) to stay above **water that only ever rises**:
 
 - **Layout:** the **clue** sits at the top, the **choices** in a tile band right below it, then the climb **scene** (ladder + hiker + water) fills the rest.
 - **Four modes** (`ClueKind`/`ChoiceKind` in `lesson.ts`), randomly switched per round — English is always on one side: image clue → English choices · English clue → image choices · native clue → English choices · English clue → native choices. `buildRounds` assigns each round a mode the data supports (image modes need pictured words; native modes need `translations[lang]`; image/native **choices** also need ~6 such words in the bin). 6 tiles per round, one correct. Targets are drawn **streak-weighted** (`streakWeight = max(1, COMPLETION_STREAK − streak)`) so lower-streak words recur more often and near-mastered ones less — until their streak takes them out of the bin — and **never the same word twice in a row** (`weightedPick` in `lesson.ts`).

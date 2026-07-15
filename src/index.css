@@ -899,3 +899,183 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
   10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
   20%, 40%, 60%, 80% { transform: translateX(8px); }
 }
+
+/* ─── Asteroids game (retro Atari space shooter) ─── */
+.ast-game {
+  position: relative;
+  width: auto;
+  height: calc(100vh - 108px); /* fallback for browsers without dvh */
+  height: calc(100dvh - 108px); /* dvh = the actual visible height on mobile */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin: 0 8px;
+  border-radius: 18px 18px 0 0;
+  background: #05070f; /* the whole game panel is deep space */
+}
+.ast-hud {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 16px 2px; z-index: 6;
+}
+.ast-wave { color: #9fd8ff; font-size: 16px; font-weight: 800; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+.ast-instruction { margin: 0; color: #7d8db0; font-size: 13.5px; font-weight: 600; text-align: center; }
+
+/* The clue, vector-terminal style on the dark panel. */
+.ast-clue { display: flex; justify-content: center; padding: 8px 16px 6px; z-index: 6; }
+.ast-clue-card {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 56px; padding: 8px 26px;
+  background: #0b1022; border: 2px solid #9fd8ff; border-radius: 14px;
+  box-shadow: 0 0 16px rgba(120, 190, 255, 0.25);
+}
+.ast-clue-card.image { padding: 6px; background: #fff; }
+.ast-clue-word { font-size: 30px; font-weight: 800; letter-spacing: 1px; color: #eaf6ff; }
+.ast-clue-img { width: 96px; height: 96px; object-fit: contain; display: block; }
+
+/* The space scene: starfield, drifting rocks, the ship at the bottom. */
+.ast-scene {
+  position: relative; flex: 1; overflow: hidden;
+  background: radial-gradient(ellipse at 30% 15%, #121a3a 0%, #070b1a 45%, #04060e 100%);
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  isolation: isolate;
+}
+.ast-scene.rumble { animation: ast-rumble 0.3s linear; }
+@keyframes ast-rumble {
+  25% { transform: translate(3px, -2px); }
+  50% { transform: translate(-3px, 2px); }
+  75% { transform: translate(2px, 1px); }
+}
+
+/* Two tiled radial-gradient layers fake a deep starfield; the finer layer twinkles. */
+.ast-stars, .ast-stars::after {
+  position: absolute; inset: 0; pointer-events: none; content: '';
+  background-image:
+    radial-gradient(1.6px 1.6px at 22% 28%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 68% 12%, #cfe4ff, transparent),
+    radial-gradient(1.8px 1.8px at 84% 62%, #fff, transparent),
+    radial-gradient(1.1px 1.1px at 40% 78%, #9fd8ff, transparent),
+    radial-gradient(1.4px 1.4px at 8% 58%, #e8f2ff, transparent);
+  background-repeat: repeat;
+  background-size: 260px 220px;
+}
+.ast-stars::after {
+  background-size: 170px 150px;
+  opacity: 0.55;
+  animation: ast-twinkle 3.2s ease-in-out infinite;
+}
+@keyframes ast-twinkle { 50% { opacity: 0.25; } }
+
+/* Ship health readout, top-left. */
+.ast-hull { position: absolute; top: 10px; left: 12px; z-index: 8; display: flex; align-items: center; gap: 8px; }
+.ast-hull-label { color: #9fd8ff; font-size: 12px; font-weight: 800; letter-spacing: 2.5px; }
+.ast-hull-bar {
+  display: block; width: 128px; height: 14px;
+  border: 2px solid #9fd8ff; border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06); overflow: hidden;
+}
+.ast-hull-fill { display: block; height: 100%; transition: width 0.3s ease, background 0.3s ease; }
+.ast-hull-num { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* Asteroids — jagged white-outline polygons carrying the choice word/picture.
+   Position (left/top) is written imperatively by the game loop each frame. */
+.ast-rock {
+  position: absolute; transform: translate(-50%, -50%);
+  background: none; border: none; padding: 0; margin: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit; z-index: 4;
+  -webkit-tap-highlight-color: transparent;
+}
+.ast-rock:disabled { cursor: default; }
+.ast-rock-body { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; animation: ast-spin var(--spin-dur, 20s) linear infinite; }
+.ast-rock.rev .ast-rock-body { animation-direction: reverse; }
+@keyframes ast-spin { to { transform: rotate(360deg); } }
+.ast-rock-body polygon { fill: #0b0e1c; stroke: #dfe9f5; stroke-width: 2.5; stroke-linejoin: round; }
+.ast-rock:hover:not(:disabled) .ast-rock-body polygon { stroke: #fff; filter: drop-shadow(0 0 6px rgba(160, 220, 255, 0.85)); }
+.ast-rock-content {
+  position: relative; z-index: 1; pointer-events: none;
+  color: #eaf3ff; font-weight: 700; font-size: 15px; line-height: 1.12;
+  text-align: center; max-width: 76%; word-break: break-word;
+}
+.ast-rock.image .ast-rock-content img {
+  width: 56px; height: 56px; object-fit: contain; display: block;
+  background: rgba(255, 255, 255, 0.94); border-radius: 8px; padding: 3px;
+}
+/* A wrong shot turns the rock GLOWING HOT — molten fill, ember glow, pulsing —
+   and (in the loop) faster + twice the ram damage. */
+.ast-rock.hot .ast-rock-body polygon {
+  fill: #3a0f04; stroke: #ff6a2a;
+  filter: drop-shadow(0 0 12px rgba(255, 106, 42, 0.95));
+}
+.ast-rock.hot { animation: ast-hot-pulse 0.9s ease-in-out infinite; }
+.ast-rock.hot .ast-rock-content { color: #ffc9a3; }
+@keyframes ast-hot-pulse { 50% { filter: brightness(1.45); } }
+
+/* The player's ship (bottom centre); inline transform aims it at the last shot. */
+.ast-ship {
+  position: absolute; width: 52px; height: 70px; z-index: 6; pointer-events: none;
+  transition: transform 0.12s ease;
+  filter: drop-shadow(0 0 7px rgba(140, 200, 255, 0.45));
+}
+.ast-ship.hit { filter: drop-shadow(0 0 16px rgba(255, 70, 70, 0.95)); }
+.ast-ship-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.ast-flame { animation: ast-flicker 0.18s steps(2) infinite; transform-origin: 24px 46px; }
+@keyframes ast-flicker { 50% { opacity: 0.35; transform: scaleY(0.75); } }
+
+/* One bullet in flight: a tracer dot from the ship's nose to the clicked rock. */
+.ast-bullet {
+  position: absolute; width: 7px; height: 7px; border-radius: 50%;
+  background: #fff; box-shadow: 0 0 9px 2px rgba(160, 220, 255, 0.9);
+  z-index: 7; pointer-events: none;
+  animation: ast-shot 150ms linear forwards;
+}
+@keyframes ast-shot {
+  from { transform: translate(-50%, -50%); }
+  to { transform: translate(calc(var(--dx) - 50%), calc(var(--dy) - 50%)); }
+}
+
+/* Kill debris — flecks flung outward that keep floating off through space. */
+.ast-debris {
+  position: absolute; border-radius: 50%; background: #e8f4ff;
+  box-shadow: 0 0 6px rgba(200, 230, 255, 0.8);
+  z-index: 5; pointer-events: none;
+  animation: ast-drift var(--dur, 2.4s) ease-out forwards;
+}
+@keyframes ast-drift {
+  0% { opacity: 1; transform: translate(-50%, -50%); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) - 50%), calc(var(--dy) - 50%)) rotate(200deg); }
+}
+
+/* The pineapple, adrift in deep space this time. */
+.ast-pineapple {
+  position: absolute; width: 30px; height: 47px; z-index: 5;
+  background: none; border: none; padding: 0; cursor: pointer;
+  animation: ast-float 6s ease-in-out infinite; opacity: 0.92;
+  -webkit-tap-highlight-color: transparent;
+}
+.ast-pineapple .pineapple-svg { width: 100%; height: 100%; }
+@keyframes ast-float { 50% { transform: translateY(-10px) rotate(8deg); } }
+
+/* Hull gone — game over. */
+.ast-over {
+  position: absolute; inset: 0; z-index: 9;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  background: rgba(6, 8, 18, 0.84); text-align: center; padding: 0 20px;
+}
+.ast-over-title { font-size: 34px; font-weight: 800; color: #ff6a5a; text-shadow: 0 0 20px rgba(255, 80, 60, 0.6); }
+.ast-over-hint { margin: 0; color: #cfe2ff; font-size: 17px; font-weight: 600; }
+.ast-retry-btn {
+  margin-top: 8px; padding: 12px 34px; font-size: 17px; font-weight: 800; font-family: inherit;
+  color: #fff; background: var(--accent); border: none; border-radius: 999px; cursor: pointer;
+  box-shadow: var(--shadow);
+}
+.ast-retry-btn:hover { filter: brightness(1.06); }
+
+@media (max-width: 520px) {
+  .ast-hud { padding: 6px 12px 0; }
+  .ast-clue { padding: 5px 12px 4px; }
+  .ast-clue-card { min-height: 44px; padding: 5px 20px; }
+  .ast-clue-word { font-size: 24px; }
+  .ast-clue-img { width: 72px; height: 72px; }
+  .ast-hull-bar { width: 92px; height: 12px; }
+  .ast-rock-content { font-size: 13px; }
+}
