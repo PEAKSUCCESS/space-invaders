@@ -849,10 +849,6 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
         >
           <ShipSvg hull={hull} />
         </div>
-        {/* Health on the ship itself — a badge just below it that never rotates. */}
-        <div className="ast-ship-health" style={{ left: `${SHIP_X}%`, top: `calc(${SHIP_Y}% + 42px)`, color: hullColor }} aria-hidden="true">
-          {hull}
-        </div>
         {healFlash && (
           <div key={healFlash.key} className="ast-heal" style={{ left: `${SHIP_X}%`, top: `calc(${SHIP_Y}% - 48px)` }} aria-hidden="true">
             +{healFlash.amount}
