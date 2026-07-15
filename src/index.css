@@ -1019,6 +1019,25 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
   filter: drop-shadow(0 0 7px rgba(140, 200, 255, 0.45));
 }
 .ast-ship.hit { filter: drop-shadow(0 0 16px rgba(255, 70, 70, 0.95)); }
+/* Health readout riding just below the ship (doesn't rotate with it). */
+.ast-ship-health {
+  position: absolute; z-index: 6; pointer-events: none;
+  transform: translateX(-50%);
+  font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
+}
+/* "+N" repair indicator floating up off the ship after a decoy/rocket kill. */
+.ast-heal {
+  position: absolute; z-index: 7; pointer-events: none;
+  font-size: 16px; font-weight: 800; color: #42d977;
+  text-shadow: 0 0 8px rgba(20, 60, 30, 0.9);
+  animation: ast-heal-float 1s ease-out forwards;
+}
+@keyframes ast-heal-float {
+  0% { transform: translate(-50%, 0); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translate(-50%, -26px); opacity: 0; }
+}
 .ast-ship-svg { width: 100%; height: 100%; display: block; overflow: visible; }
 .ast-flame { animation: ast-flicker 0.18s steps(2) infinite; transform-origin: 24px 46px; }
 @keyframes ast-flicker { 50% { opacity: 0.35; transform: scaleY(0.75); } }
@@ -1076,6 +1095,14 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
 }
 .ast-flyby:hover .ast-cruiser-svg,
 .ast-flyby:hover .ast-rocket-svg { filter: drop-shadow(0 0 10px rgba(200, 230, 255, 0.85)); }
+.ast-flyby.star { pointer-events: none; }
+
+/* A shooting star: a short bright streak, brightest at its leading (right) end. */
+.ast-star-streak {
+  display: block; width: 58px; height: 2.5px; border-radius: 999px;
+  background: linear-gradient(to right, transparent, rgba(200, 225, 255, 0.55) 55%, #ffffff);
+  box-shadow: 0 0 7px 1px rgba(220, 240, 255, 0.75);
+}
 @keyframes ast-flyby-move {
   from { transform: translate(-50%, -50%); }
   to { transform: translate(calc(var(--dx) - 50%), calc(var(--dy) - 50%)); }
@@ -1084,10 +1111,11 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
 .ast-cruiser-svg { width: 150px; height: 50px; display: block; overflow: visible; filter: drop-shadow(0 0 8px rgba(140, 200, 255, 0.35)); }
 .ast-rocket-svg { width: 58px; height: 24px; display: block; overflow: visible; filter: drop-shadow(0 0 5px rgba(200, 230, 255, 0.4)); }
 
-/* The cruiser popup: the same ship shape, larger, centred; auto-dismisses. */
+/* The cruiser popup: the same ship shape, larger, in the upper quadrant so it
+   never covers the player's ship at centre; auto-dismisses after 1s. */
 .ast-cruiser-popup {
-  position: absolute; left: 50%; top: 38%; z-index: 12; pointer-events: none;
-  width: min(80%, 540px);
+  position: absolute; left: 50%; top: 19%; z-index: 12; pointer-events: none;
+  width: min(78%, 500px);
   transform: translate(-50%, -50%);
   animation: cruiser-pop 0.25s ease-out;
   filter: drop-shadow(0 0 26px rgba(140, 200, 255, 0.55));

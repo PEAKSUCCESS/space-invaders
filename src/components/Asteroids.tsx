@@ -51,8 +51,13 @@ const SHIP_Y = 50;               // ship centre, % of scene height — dead cent
 const SHIP_RADIUS_PX = 30;       // collision radius around the ship centre
 const SHARD_COUNT = 8;           // mini-asteroid shards per destroyed rock
 const DECOY_COUNT = 3;           // unlabeled rocks per wave — shootable space junk
+const DECOY_HEAL = 5;            // hull repaired by blasting a decoy rock
+const ROCKET_HEAL = 10;          // hull repaired by shooting down a rocket
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+// Rock sizing, smaller on phones so 4 word/picture rocks fit a narrow scene.
+const isSmallScreen = () => typeof window !== 'undefined' && window.innerWidth <= 520;
 
 function nativeOf(w: ApiWord, language: LanguageCode): string | undefined {
   return w.translations?.[language]?.[0]?.word;
@@ -142,10 +147,11 @@ function buildRocks(
     spinDur: 9 + Math.random() * 9, // slow, visible axis spin (one turn / 9–18s)
     reverse: Math.random() < 0.5,
   });
+  const small = isSmallScreen();
   const labeled: RockDef[] = choices.map((c, i) => ({
     ...c,
     id: `${keyPrefix}:${c.id}`, // unique across waves/retries so DOM refs never collide
-    sizePx: c.img ? 96 : 110,
+    sizePx: c.img ? (small ? 74 : 96) : (small ? 84 : 110),
     ...shape(),
     ...spawn(sides[i % sides.length], DRIFT_PER_SEC * (0.8 + Math.random() * 0.5)),
   }));
@@ -167,7 +173,7 @@ function buildRocks(
       id: `${keyPrefix}:x-${i}`,
       correct: false,
       decoy: true,
-      sizePx: 36 + Math.random() * 54,
+      sizePx: small ? 28 + Math.random() * 40 : 36 + Math.random() * 54,
       ...shape(),
       x0, y0,
       vx0: ((tx - x0) / d) * spd,
@@ -245,24 +251,24 @@ function AlienPineapple() {
 // Decorative flybys: the PeakESL cruiser gliding past now and then, and small
 // rockets zipping through in random directions. Pure scenery — behind the rocks,
 // no pointer events, no effect on play.
-interface Flyby { id: number; kind: 'cruiser' | 'rocket'; x: number; y: number; dxPx: number; dyPx: number; dur: number; deg: number; flip: boolean; }
+interface Flyby { id: number; kind: 'cruiser' | 'rocket' | 'star'; x: number; y: number; dxPx: number; dyPx: number; dur: number; deg: number; flip: boolean; }
 let flybySeq = 0;
 
+// The cruiser keeps ONE route: left → right through the upper quadrant, well
+// clear of the player's ship at centre.
+const CRUISER_LANE_Y = 14; // % from the top
+
 function makeCruiser(w: number): Flyby {
-  const ltr = Math.random() < 0.5;
-  // Cruise in a lane above or below the centre band, so the flight path never
-  // crosses the player's ship (which sits at 50/50).
-  const y = Math.random() < 0.5 ? 9 + Math.random() * 26 : 64 + Math.random() * 18;
   return {
     id: ++flybySeq,
     kind: 'cruiser',
-    x: ltr ? -14 : 114,
-    y,
-    dxPx: (ltr ? 1.28 : -1.28) * w,
+    x: -14,
+    y: CRUISER_LANE_Y,
+    dxPx: 1.28 * w,
     dyPx: 0,
-    dur: 9 + Math.random() * 5,
+    dur: 11,
     deg: 0,
-    flip: !ltr,
+    flip: false,
   };
 }
 
@@ -281,6 +287,25 @@ function makeRocket(w: number, h: number): Flyby {
     kind: 'rocket',
     x: x1, y: y1, dxPx, dyPx,
     dur: 3.25 + Math.random() * 3, // 20% slower than the first cut (duration ×1.25)
+    deg: Math.atan2(dyPx, dxPx) * (180 / Math.PI),
+    flip: false,
+  };
+}
+
+// A shooting star: a small, bright streak that flashes across in under two
+// seconds on a shallow random diagonal.
+function makeStar(w: number, h: number): Flyby {
+  const ltr = Math.random() < 0.5;
+  const x1 = ltr ? -8 : 108;
+  const y1 = 4 + Math.random() * 55;
+  const y2 = y1 + 14 + Math.random() * 30; // always sloping gently downward
+  const dxPx = ((ltr ? 116 : -116) / 100) * w;
+  const dyPx = ((y2 - y1) / 100) * h;
+  return {
+    id: ++flybySeq,
+    kind: 'star',
+    x: x1, y: y1, dxPx, dyPx,
+    dur: 1 + Math.random() * 0.8,
     deg: Math.atan2(dyPx, dxPx) * (180 / Math.PI),
     flip: false,
   };
@@ -339,12 +364,36 @@ function RocketSvg() {
 }
 
 // The classic Atari wedge — a white outline ship with a flickering thruster.
-function ShipSvg() {
+// Battle damage appears as the hull degrades: scuffs below 75, a crack and
+// embers below 50, a glowing breach + dulled outline below 25.
+function ShipSvg({ hull }: { hull: number }) {
+  const outline = hull > 50 ? '#eaf6ff' : hull > 25 ? '#ffd9b8' : '#ff9a7a';
   return (
     <svg viewBox="0 0 48 66" className="ast-ship-svg" role="img" aria-label="your ship">
       <polygon className="ast-flame" points="24,46 30,54 24,64 18,54" fill="#ffa73a" stroke="#ffd9a0" strokeWidth="1" />
-      <polygon points="24,2 42,52 24,42 6,52" fill="#0b1022" stroke="#eaf6ff" strokeWidth="2.5" strokeLinejoin="round" />
-      <line x1="15" y1="38" x2="33" y2="38" stroke="#eaf6ff" strokeWidth="1.6" />
+      <polygon points="24,2 42,52 24,42 6,52" fill="#0b1022" stroke={outline} strokeWidth="2.5" strokeLinejoin="round" />
+      <line x1="15" y1="38" x2="33" y2="38" stroke={outline} strokeWidth="1.6" />
+      {hull < 75 && (
+        <g stroke="#4a5a72" strokeWidth="1.6" strokeLinecap="round">
+          <line x1="29" y1="18" x2="34" y2="24" />
+          <line x1="32" y1="16" x2="35" y2="20" />
+          <line x1="14" y1="34" x2="18" y2="30" />
+        </g>
+      )}
+      {hull < 50 && (
+        <g>
+          <path d="M24 6 L21 15 L26 22 L22 30" stroke="#2c3850" strokeWidth="2" fill="none" strokeLinecap="round" />
+          <circle cx="26" cy="22" r="1.5" fill="#ff8a3a" className="alien-orb" />
+          <circle cx="21" cy="15" r="1.1" fill="#ffb25a" className="alien-orb" />
+        </g>
+      )}
+      {hull < 25 && (
+        <g>
+          <path d="M30 30 L36 36 L31 40 L35 45 L28 41 Z" fill="#1a0e08" stroke="#ff6a2a" strokeWidth="1.4" strokeLinejoin="round" />
+          <circle cx="33" cy="38" r="1.7" fill="#ff6a2a" className="alien-orb" />
+          <circle cx="17" cy="44" r="1.3" fill="#ff8a3a" className="alien-orb" />
+        </g>
+      )}
     </svg>
   );
 }
@@ -362,13 +411,15 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
   const [bullet, setBullet] = useState<{ key: number; dx: number; dy: number } | null>(null);
   const [shards, setShards] = useState<Shard[]>([]);
   const [shipHit, setShipHit] = useState(false);
+  // Floating "+N" over the ship when a decoy/rocket kill repairs the hull.
+  const [healFlash, setHealFlash] = useState<{ key: number; amount: number } | null>(null);
   // Hidden pineapple: rolled once per game (survives retries — at most one find).
   const [pineapple] = useState(() => rollPineapple(pineappleChance));
   const [pineappleFound, setPineappleFound] = useState(false);
   const [yipeeOpen, setYipeeOpen] = useState(false);
   // Decorative traffic passing through the scene (cruiser + rockets).
   const [flybys, setFlybys] = useState<Flyby[]>([]);
-  // Clicking the cruiser shows a 2s "Speech is Power" card (cruiser-shaped, larger).
+  // Clicking the cruiser shows a 1s "Speech is Power" card (cruiser-shaped, larger).
   const [cruiserPopup, setCruiserPopup] = useState(false);
   const popupTimerRef = useRef(0);
 
@@ -389,6 +440,8 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
   const pausedRef = useRef(paused);
   const yipeeRef = useRef(false);      // freeze the rocks while the YIPEE card is up
   const hitTimerRef = useRef(0);
+  const healTimerRef = useRef(0);
+  const healSeqRef = useRef(0);
   const bulletKeyRef = useRef(0);
   // Drift-speed scale from the runtime config (waterRisePerSec ÷ its default),
   // so the same no-rebuild difficulty knob tunes this game too. Live via ref.
@@ -454,9 +507,13 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
     const scheduleRocket = () => {
       timers.push(window.setTimeout(() => launch(makeRocket, scheduleRocket), 5000 + Math.random() * 9000));
     };
+    const scheduleStar = () => {
+      timers.push(window.setTimeout(() => launch(makeStar, scheduleStar), 3500 + Math.random() * 6500));
+    };
     // First appearances early enough to be seen within a normal game.
     timers.push(window.setTimeout(() => launch(makeCruiser, scheduleCruiser), 4000 + Math.random() * 4000));
     timers.push(window.setTimeout(() => launch(makeRocket, scheduleRocket), 2000 + Math.random() * 3000));
+    timers.push(window.setTimeout(() => launch(makeStar, scheduleStar), 1200 + Math.random() * 2000));
     return () => {
       alive = false;
       timers.forEach((t) => window.clearTimeout(t));
@@ -534,6 +591,17 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  // Blasting space junk repairs the ship: +DECOY_HEAL per decoy rock,
+  // +ROCKET_HEAL per rocket, capped at full hull. A "+N" floats over the ship.
+  function repair(amount: number) {
+    if (gameOverRef.current) return;
+    hullRef.current = Math.min(MAX_HULL, hullRef.current + amount);
+    setHull(hullRef.current);
+    setHealFlash({ key: ++healSeqRef.current, amount });
+    window.clearTimeout(healTimerRef.current);
+    healTimerRef.current = window.setTimeout(() => setHealFlash(null), 1000);
+  }
+
   function advance() {
     if (roundIndex + 1 >= total) {
       doneRef.current = true;
@@ -564,7 +632,8 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
     if (gameOverRef.current || resolvedRef.current) return;
 
     const kd = kinRef.current.get(r.id);
-    // Decoys are just space junk: blast into shards, never graded, wave stays open.
+    // Decoys are space junk: blast into shards, never graded, wave stays open —
+    // and clearing one patches the hull a little.
     if (r.decoy) {
       setStatus((s) => ({ ...s, [r.id]: 'dead' }));
       if (kd) {
@@ -573,6 +642,7 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
         setShards((d) => [...d, ...batch]);
         window.setTimeout(() => setShards((d) => d.filter((p) => !ids.has(p.id))), 4200);
       }
+      repair(DECOY_HEAL);
       return;
     }
 
@@ -620,10 +690,11 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
         window.setTimeout(() => setShards((d) => d.filter((p) => !ids.has(p.id))), 4200);
       }
       setFlybys((fl) => fl.filter((x) => x.id !== f.id));
+      repair(ROCKET_HEAL); // shooting down a rocket is a bigger hull patch
     } else {
       setCruiserPopup(true);
       window.clearTimeout(popupTimerRef.current);
-      popupTimerRef.current = window.setTimeout(() => setCruiserPopup(false), 2000);
+      popupTimerRef.current = window.setTimeout(() => setCruiserPopup(false), 1000);
     }
   }
 
@@ -690,8 +761,8 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
             aria-hidden="true"
             onClick={(e) => clickFlyby(f, e)}
           >
-            <span className="ast-flyby-inner" style={{ transform: f.kind === 'rocket' ? `rotate(${f.deg}deg)` : f.flip ? 'scaleX(-1)' : undefined }}>
-              {f.kind === 'cruiser' ? <CruiserSvg flip={f.flip} /> : <RocketSvg />}
+            <span className="ast-flyby-inner" style={{ transform: f.kind !== 'cruiser' ? `rotate(${f.deg}deg)` : f.flip ? 'scaleX(-1)' : undefined }}>
+              {f.kind === 'cruiser' ? <CruiserSvg flip={f.flip} /> : f.kind === 'rocket' ? <RocketSvg /> : <span className="ast-star-streak" />}
             </span>
           </button>
         ))}
@@ -776,8 +847,17 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
           className={`ast-ship${shipHit ? ' hit' : ''}`}
           style={{ left: `${SHIP_X}%`, top: `${SHIP_Y}%`, transform: `translate(-50%, -50%) rotate(${aimDeg}deg)` }}
         >
-          <ShipSvg />
+          <ShipSvg hull={hull} />
         </div>
+        {/* Health on the ship itself — a badge just below it that never rotates. */}
+        <div className="ast-ship-health" style={{ left: `${SHIP_X}%`, top: `calc(${SHIP_Y}% + 42px)`, color: hullColor }} aria-hidden="true">
+          {hull}
+        </div>
+        {healFlash && (
+          <div key={healFlash.key} className="ast-heal" style={{ left: `${SHIP_X}%`, top: `calc(${SHIP_Y}% - 48px)` }} aria-hidden="true">
+            +{healFlash.amount}
+          </div>
+        )}
 
         {pineapple && !pineappleFound && (
           <button
