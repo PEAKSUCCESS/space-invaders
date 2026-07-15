@@ -80,7 +80,7 @@ export const STRINGS = {
 
   // Asteroids game
   'ast.wave': 'Wave {n}/{total}',
-  'ast.instruction': 'Shoot the asteroid that matches — before the rocks smash your ship!',
+  'ast.instruction': 'Shoot the asteroid that matches by clicking on it — before the asteroids smash your ship!',
   'ast.hull': 'HULL',
   'ast.gameOver': 'Ship destroyed!',
   'ast.gameOverHint': 'The asteroids wrecked your ship — try again.',
