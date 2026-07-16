@@ -73,7 +73,8 @@ interface RockDef {
   label?: string;
   img?: string;
   sizePx: number;      // button diameter (also the collision size)
-  points: string;      // jagged polygon for the 100×100 viewBox
+  body: string;        // smooth blob outline path for the 100×100 viewBox
+  craters: string;     // interior crater ellipses (path), drawn dimmer
   spinDur: number;     // seconds per revolution
   reverse: boolean;    // spin direction
   x0: number; y0: number;    // spawn centre, % of scene
@@ -82,18 +83,42 @@ interface RockDef {
 }
 interface Kin { x: number; y: number; vx: number; vy: number; spd: number; rPx: number; decoy?: boolean; deflected?: boolean; }
 
-// A destroyed rock's shards — small jagged asteroids flung outward, drifting off.
-interface Shard { id: number; x: number; y: number; dx: number; dy: number; dur: number; size: number; points: string; }
+// A destroyed rock's shards — small rock chunks flung outward, drifting off.
+interface Shard { id: number; x: number; y: number; dx: number; dy: number; dur: number; size: number; d: string; }
 
-// A classic Atari-style jagged rock outline: n vertices at randomised radii.
-function makeRockPoints(n = 11): string {
-  const pts: string[] = [];
+// The classic vector-rock look, rounded: a smooth potato-blob outline drawn
+// through randomised radii (midpoint-quadratic smoothing), plus a few interior
+// crater ellipses. craterMinDist pushes craters out toward the rim — used on
+// labeled rocks so the word/picture in the middle stays readable.
+interface RockShape { body: string; craters: string; }
+function makeRockShape(n = 9, craterCount = 3, craterMinDist = 6): RockShape {
+  const pts: Array<[number, number]> = [];
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2;
-    const r = 34 + Math.random() * 14;
-    pts.push(`${(50 + Math.cos(a) * r).toFixed(1)},${(50 + Math.sin(a) * r).toFixed(1)}`);
+    const r = 35 + Math.random() * 11;
+    pts.push([50 + Math.cos(a) * r, 50 + Math.sin(a) * r]);
   }
-  return pts.join(' ');
+  const mid = (p: [number, number], q: [number, number]) =>
+    `${((p[0] + q[0]) / 2).toFixed(1)} ${((p[1] + q[1]) / 2).toFixed(1)}`;
+  let body = `M ${mid(pts[n - 1], pts[0])}`;
+  for (let i = 0; i < n; i++) {
+    body += ` Q ${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)} ${mid(pts[i], pts[(i + 1) % n])}`;
+  }
+  body += ' Z';
+  let craters = '';
+  for (let i = 0; i < craterCount; i++) {
+    const rx = (i === 0 ? 6 : 3) + Math.random() * 4; // first crater is the big one
+    const ry = rx * (0.6 + Math.random() * 0.35);
+    const dist = craterMinDist + Math.random() * Math.max(2, 28 - rx - craterMinDist);
+    // One angular sector per crater so they never pile onto each other.
+    const a = ((i + 0.2 + Math.random() * 0.6) / craterCount) * Math.PI * 2;
+    const cx = 50 + Math.cos(a) * dist;
+    const cy = 50 + Math.sin(a) * dist;
+    craters += `M ${(cx - rx).toFixed(1)} ${cy.toFixed(1)} `
+      + `a ${rx.toFixed(1)} ${ry.toFixed(1)} 0 1 0 ${(rx * 2).toFixed(1)} 0 `
+      + `a ${rx.toFixed(1)} ${ry.toFixed(1)} 0 1 0 ${(-rx * 2).toFixed(1)} 0 Z `;
+  }
+  return { body, craters: craters.trim() };
 }
 
 // Module-level (Math.random outside render, same convention as buildChoices in
@@ -143,8 +168,10 @@ function buildRocks(
     const d = Math.hypot(SHIP_X - x0, SHIP_Y - y0) || 1;
     return { x0, y0, vx0: ((SHIP_X - x0) / d) * spd, vy0: ((SHIP_Y - y0) / d) * spd, spd };
   };
-  const shape = () => ({
-    points: makeRockPoints(),
+  // Labeled rocks keep their craters small and out near the rim (the word or
+  // picture owns the middle); blank decoys get the full cratered-blob look.
+  const shape = (decoy = false) => ({
+    ...makeRockShape(9, decoy ? 3 : 2, decoy ? 6 : 20),
     spinDur: 9 + Math.random() * 9, // slow, visible axis spin (one turn / 9–18s)
     reverse: Math.random() < 0.5,
   });
@@ -178,7 +205,7 @@ function buildRocks(
       correct: false,
       decoy: true,
       sizePx: small ? 28 + Math.random() * 40 : 36 + Math.random() * 54,
-      ...shape(),
+      ...shape(true),
       x0, y0,
       vx0: ((tx - x0) / d) * spd,
       vy0: ((ty - y0) / d) * spd,
@@ -190,7 +217,7 @@ function buildRocks(
 
 let shardSeq = 0;
 // The kill burst: the rock breaks into SHARD_COUNT small asteroids — each its
-// own jagged outline — flung outward in a ring, floating off through space.
+// own little blob outline — flung outward in a ring, floating off through space.
 function makeShards(x: number, y: number, scale = 1): Shard[] {
   return Array.from({ length: SHARD_COUNT }, (_, i) => {
     const a = ((i + Math.random() * 0.7) / SHARD_COUNT) * Math.PI * 2; // spread round the ring
@@ -202,52 +229,67 @@ function makeShards(x: number, y: number, scale = 1): Shard[] {
       dy: Math.sin(a) * dist,
       dur: 2.2 + Math.random() * 1.6,
       size: (12 + Math.random() * 12) * scale,
-      points: makeRockPoints(7),
+      d: makeRockShape(7, 0).body,
     };
   });
 }
 
-// Hidden-pineapple easter egg, adrift in deep space this time. Same contract as
-// the climb game: rolled once per game, at most one find, spawn odds usage-driven.
+// Hidden-pineapple easter egg — now hiding inside a flying saucer adrift in
+// deep space. Same contract as the climb game: rolled once per game, at most
+// one find, spawn odds usage-driven.
 function rollPineapple(chance: number): { left: number; top: number } | null {
   if (Math.random() >= chance) return null;
   return { left: 6 + Math.random() * 84, top: 26 + Math.random() * 42 };
 }
 
-// The pineapple, abducted: green-skinned, three black alien eyes, and a pair of
-// glowing antennae — but still unmistakably a pineapple.
-function AlienPineapple() {
+// The pineapple, smuggled aboard: a neon-outline flying saucer (same white
+// vector look as the rocks) whose glass dome barely shows the tiny alien
+// pineapple hiding inside — green skin, three eyes, glowing antennae. Far
+// subtler than the old free-floating pineapple: you have to spot the stowaway.
+function PineappleUfo() {
   return (
-    <svg viewBox="0 0 40 72" className="pineapple-svg alien" aria-hidden="true">
-      {/* antennae with glowing orbs */}
-      <g stroke="#7ef29a" strokeWidth="1.7" fill="none" strokeLinecap="round">
-        <path d="M14 14 Q 9 8 7 4" />
-        <path d="M26 14 Q 31 8 33 4" />
+    <svg viewBox="0 0 120 64" className="pineapple-ufo-svg" aria-hidden="true">
+      {/* the stowaway — tiny alien pineapple, lower body sunk into the hull */}
+      <g transform="translate(53.2 9) scale(0.34)">
+        {/* antennae with glowing orbs */}
+        <g stroke="#7ef29a" strokeWidth="1.7" fill="none" strokeLinecap="round">
+          <path d="M14 14 Q 9 8 7 4" />
+          <path d="M26 14 Q 31 8 33 4" />
+        </g>
+        <circle cx="7" cy="4" r="2.6" fill="#b6ffc9" className="alien-orb" />
+        <circle cx="33" cy="4" r="2.6" fill="#b6ffc9" className="alien-orb" />
+        {/* crown of leaves */}
+        <g fill="#3d9e4c" transform="translate(0 10)">
+          <path d="M20 22 L7 8 L17 16 Z" fill="#2f8a3e" />
+          <path d="M20 22 L33 8 L23 16 Z" fill="#2f8a3e" />
+          <path d="M20 22 L12 2 L19 13 Z" />
+          <path d="M20 22 L28 2 L21 13 Z" />
+          <path d="M20 22 L20 0 L22.5 12 Z" fill="#2f8a3e" />
+        </g>
+        {/* body — little green pineapple + crosshatch skin */}
+        <ellipse cx="20" cy="50" rx="14" ry="19" fill="#8fd94c" />
+        <g stroke="#5da32e" strokeWidth="1.4" opacity="0.85" fill="none">
+          <path d="M9 38 L33 58" /><path d="M7 46 L31 65" /><path d="M8 55 L26 68" /><path d="M13 33 L34 50" />
+          <path d="M31 38 L7 58" /><path d="M33 46 L9 65" /><path d="M32 55 L14 68" /><path d="M27 33 L6 50" />
+        </g>
+        {/* three big alien eyes */}
+        <ellipse cx="14" cy="46" rx="3.1" ry="4.5" fill="#0c2b12" />
+        <ellipse cx="26" cy="46" rx="3.1" ry="4.5" fill="#0c2b12" />
+        <ellipse cx="20" cy="52.5" rx="2.3" ry="3.3" fill="#0c2b12" />
+        <circle cx="15" cy="44.4" r="0.9" fill="#d9ffe3" />
+        <circle cx="27" cy="44.4" r="0.9" fill="#d9ffe3" />
+        <circle cx="20.8" cy="51.2" r="0.7" fill="#d9ffe3" />
       </g>
-      <circle cx="7" cy="4" r="2.6" fill="#b6ffc9" className="alien-orb" />
-      <circle cx="33" cy="4" r="2.6" fill="#b6ffc9" className="alien-orb" />
-      {/* crown of leaves */}
-      <g fill="#3d9e4c" transform="translate(0 10)">
-        <path d="M20 22 L7 8 L17 16 Z" fill="#2f8a3e" />
-        <path d="M20 22 L33 8 L23 16 Z" fill="#2f8a3e" />
-        <path d="M20 22 L12 2 L19 13 Z" />
-        <path d="M20 22 L28 2 L21 13 Z" />
-        <path d="M20 22 L20 0 L22.5 12 Z" fill="#2f8a3e" />
-      </g>
-      {/* body — little green pineapple + crosshatch skin */}
-      <ellipse cx="20" cy="50" rx="14" ry="19" fill="#8fd94c" />
-      <g stroke="#5da32e" strokeWidth="1.4" opacity="0.85" fill="none">
-        <path d="M9 38 L33 58" /><path d="M7 46 L31 65" /><path d="M8 55 L26 68" /><path d="M13 33 L34 50" />
-        <path d="M31 38 L7 58" /><path d="M33 46 L9 65" /><path d="M32 55 L14 68" /><path d="M27 33 L6 50" />
-      </g>
-      {/* three big alien eyes + a tiny mouth */}
-      <ellipse cx="14" cy="46" rx="3.1" ry="4.5" fill="#0c2b12" />
-      <ellipse cx="26" cy="46" rx="3.1" ry="4.5" fill="#0c2b12" />
-      <ellipse cx="20" cy="52.5" rx="2.3" ry="3.3" fill="#0c2b12" />
-      <circle cx="15" cy="44.4" r="0.9" fill="#d9ffe3" />
-      <circle cx="27" cy="44.4" r="0.9" fill="#d9ffe3" />
-      <circle cx="20.8" cy="51.2" r="0.7" fill="#d9ffe3" />
-      <path d="M17 59 Q 20 61.5 23 59" stroke="#0c2b12" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+      {/* dome glass over the stowaway */}
+      <path d="M38 30 Q 38 8 60 8 Q 82 8 82 30 Z"
+        fill="rgba(159, 216, 255, 0.13)" stroke="#c9d8ea" strokeWidth="2" strokeLinejoin="round" />
+      {/* saucer hull — covers the dome base and the pineapple's lower half */}
+      <ellipse cx="60" cy="40" rx="52" ry="13" fill="#0b0e1c" stroke="#dfe9f5" strokeWidth="2.5" />
+      <path d="M 12 36 Q 60 25 108 36" stroke="#dfe9f5" strokeWidth="1.4" fill="none" opacity="0.7" />
+      {/* rim lights */}
+      <circle cx="28" cy="45" r="1.8" fill="#9fd8ff" className="alien-orb" />
+      <circle cx="60" cy="48" r="1.8" fill="#9fd8ff" className="alien-orb" />
+      <circle cx="92" cy="45" r="1.8" fill="#9fd8ff" className="alien-orb" />
     </svg>
   );
 }
@@ -875,7 +917,8 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
               onClick={() => shoot(r)}
             >
               <svg className="ast-rock-body" viewBox="0 0 100 100" aria-hidden="true">
-                <polygon points={r.points} />
+                <path className="ast-rock-outline" d={r.body} />
+                <path className="ast-rock-craters" d={r.craters} />
               </svg>
               <span className="ast-rock-content">
                 {r.img ? <img src={r.img} alt="" /> : r.label}
@@ -904,7 +947,7 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
             } as CSSProperties}
             aria-hidden="true"
           >
-            <polygon points={d.points} />
+            <path d={d.d} />
           </svg>
         ))}
 
@@ -947,7 +990,7 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
             onClick={foundPineapple}
             aria-hidden="true"
           >
-            <AlienPineapple />
+            <PineappleUfo />
           </button>
         )}
 

@@ -976,8 +976,9 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
 .ast-hull-fill { display: block; height: 100%; transition: width 0.3s ease, background 0.3s ease; }
 .ast-hull-num { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
 
-/* Asteroids — jagged white-outline polygons carrying the choice word/picture.
-   Position (left/top) is written imperatively by the game loop each frame. */
+/* Asteroids — rounded white-outline blobs with interior craters, carrying the
+   choice word/picture. Position (left/top) is written imperatively by the game
+   loop each frame. */
 .ast-rock {
   position: absolute; transform: translate(-50%, -50%);
   background: none; border: none; padding: 0; margin: 0; cursor: pointer;
@@ -989,10 +990,12 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
 .ast-rock-body { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; animation: ast-spin var(--spin-dur, 20s) linear infinite; }
 .ast-rock.rev .ast-rock-body { animation-direction: reverse; }
 @keyframes ast-spin { to { transform: rotate(360deg); } }
-.ast-rock-body polygon { fill: #0b0e1c; stroke: #dfe9f5; stroke-width: 2.5; stroke-linejoin: round; }
-.ast-rock:hover:not(:disabled) .ast-rock-body polygon { stroke: #fff; filter: drop-shadow(0 0 6px rgba(160, 220, 255, 0.85)); }
+.ast-rock-outline { fill: #0b0e1c; stroke: #dfe9f5; stroke-width: 2.5; stroke-linejoin: round; }
+.ast-rock-craters { fill: none; stroke: #b8c9da; stroke-width: 1.6; opacity: 0.85; }
+.ast-rock:hover:not(:disabled) .ast-rock-outline { stroke: #fff; filter: drop-shadow(0 0 6px rgba(160, 220, 255, 0.85)); }
 /* Unlabeled decoy rocks — plain space junk, slightly dimmer than the choices. */
-.ast-rock.decoy .ast-rock-body polygon { stroke: #9fb0c2; }
+.ast-rock.decoy .ast-rock-outline { stroke: #9fb0c2; }
+.ast-rock.decoy .ast-rock-craters { stroke: #8296ab; }
 .ast-rock-content {
   position: relative; z-index: 1; pointer-events: none;
   color: #eaf3ff; font-weight: 700; font-size: 15px; line-height: 1.12;
@@ -1004,10 +1007,11 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
 }
 /* A wrong shot turns the rock GLOWING HOT — molten fill, ember glow, pulsing —
    and (in the loop) faster + twice the ram damage. */
-.ast-rock.hot .ast-rock-body polygon {
+.ast-rock.hot .ast-rock-outline {
   fill: #3a0f04; stroke: #ff6a2a;
   filter: drop-shadow(0 0 12px rgba(255, 106, 42, 0.95));
 }
+.ast-rock.hot .ast-rock-craters { stroke: #c9531f; }
 .ast-rock.hot { animation: ast-hot-pulse 0.9s ease-in-out infinite; }
 .ast-rock.hot .ast-rock-content { color: #ffc9a3; }
 @keyframes ast-hot-pulse { 50% { filter: brightness(1.45); } }
@@ -1067,14 +1071,14 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
   to { transform: translate(calc(var(--dx) - 50%), calc(var(--dy) - 50%)); }
 }
 
-/* Kill shards — the rock breaks into small jagged asteroids that tumble
+/* Kill shards — the rock breaks into small rounded chunks that tumble
    outward and float off through space, fading as they go. */
 .ast-shard {
   position: absolute; overflow: visible;
   z-index: 5; pointer-events: none;
   animation: ast-drift var(--dur, 2.8s) ease-out forwards;
 }
-.ast-shard polygon {
+.ast-shard path {
   fill: #0b0e1c; stroke: #dfe9f5; stroke-width: 7; stroke-linejoin: round;
   filter: drop-shadow(0 0 4px rgba(200, 230, 255, 0.55));
 }
@@ -1083,16 +1087,17 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
   100% { opacity: 0; transform: translate(calc(var(--dx) - 50%), calc(var(--dy) - 50%)) rotate(320deg); }
 }
 
-/* The alien pineapple, adrift in deep space — soft green glow, bobbing. */
+/* The pineapple's flying saucer, adrift in deep space — bobbing gently, with
+   only a faint scenery glow (no green beacon: the stowaway must stay hidden). */
 .ast-pineapple {
-  position: absolute; width: 32px; height: 56px; z-index: 5;
+  position: absolute; width: 68px; height: 36px; z-index: 5;
   background: none; border: none; padding: 0; cursor: pointer;
   animation: ast-float 6s ease-in-out infinite; opacity: 0.94;
   -webkit-tap-highlight-color: transparent;
-  filter: drop-shadow(0 0 7px rgba(126, 242, 154, 0.65));
+  filter: drop-shadow(0 0 6px rgba(140, 200, 255, 0.35));
 }
-.ast-pineapple .pineapple-svg { width: 100%; height: 100%; }
-@keyframes ast-float { 50% { transform: translateY(-10px) rotate(8deg); } }
+.ast-pineapple .pineapple-ufo-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+@keyframes ast-float { 50% { transform: translateY(-10px) rotate(4deg); } }
 /* Antenna orbs (and ship running lights) softly pulse. */
 .alien-orb { animation: alien-orb-pulse 1.6s ease-in-out infinite; }
 @keyframes alien-orb-pulse { 50% { opacity: 0.35; } }
