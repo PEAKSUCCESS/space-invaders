@@ -1090,13 +1090,15 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
 /* The pineapple's flying saucer, adrift in deep space — bobbing gently, with
    only a faint scenery glow (no green beacon: the stowaway must stay hidden). */
 .ast-pineapple {
-  position: absolute; width: 68px; height: 36px; z-index: 5;
+  position: absolute; width: 86px; height: 46px; z-index: 5;
   background: none; border: none; padding: 0; cursor: pointer;
   animation: ast-float 6s ease-in-out infinite; opacity: 0.94;
   -webkit-tap-highlight-color: transparent;
   filter: drop-shadow(0 0 6px rgba(140, 200, 255, 0.35));
 }
 .ast-pineapple .pineapple-ufo-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+/* The stowaway glows green so it reads through the dome at a glance. */
+.pineapple-stowaway { filter: drop-shadow(0 0 3px rgba(126, 242, 154, 0.85)); }
 @keyframes ast-float { 50% { transform: translateY(-10px) rotate(4deg); } }
 /* Antenna orbs (and ship running lights) softly pulse. */
 .alien-orb { animation: alien-orb-pulse 1.6s ease-in-out infinite; }
