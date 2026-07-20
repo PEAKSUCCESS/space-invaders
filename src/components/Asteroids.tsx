@@ -243,14 +243,16 @@ function rollPineapple(chance: number): { left: number; top: number } | null {
 }
 
 // The pineapple, smuggled aboard: a neon-outline flying saucer (same white
-// vector look as the rocks) whose glass dome barely shows the tiny alien
-// pineapple hiding inside — green skin, three eyes, glowing antennae. Far
-// subtler than the old free-floating pineapple: you have to spot the stowaway.
+// vector look as the rocks) with the alien pineapple riding plainly in the
+// glass dome — green skin, three eyes, glowing antennae, lit by its own glow
+// so it reads at a glance.
 function PineappleUfo() {
   return (
     <svg viewBox="0 0 120 64" className="pineapple-ufo-svg" aria-hidden="true">
-      {/* the stowaway — tiny alien pineapple, lower body sunk into the hull */}
-      <g transform="translate(53.2 9) scale(0.34)">
+      {/* dome glow behind the stowaway so it pops against the dark hull */}
+      <ellipse cx="60" cy="18" rx="17" ry="14" fill="rgba(126, 242, 154, 0.18)" />
+      {/* the stowaway — alien pineapple, lower body sunk into the hull */}
+      <g className="pineapple-stowaway" transform="translate(49 0) scale(0.55)">
         {/* antennae with glowing orbs */}
         <g stroke="#7ef29a" strokeWidth="1.7" fill="none" strokeLinecap="round">
           <path d="M14 14 Q 9 8 7 4" />
@@ -281,15 +283,15 @@ function PineappleUfo() {
         <circle cx="20.8" cy="51.2" r="0.7" fill="#d9ffe3" />
       </g>
       {/* dome glass over the stowaway */}
-      <path d="M38 30 Q 38 8 60 8 Q 82 8 82 30 Z"
-        fill="rgba(159, 216, 255, 0.13)" stroke="#c9d8ea" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M34 32 Q 34 2 60 2 Q 86 2 86 32 Z"
+        fill="rgba(159, 216, 255, 0.1)" stroke="#c9d8ea" strokeWidth="2" strokeLinejoin="round" />
       {/* saucer hull — covers the dome base and the pineapple's lower half */}
-      <ellipse cx="60" cy="40" rx="52" ry="13" fill="#0b0e1c" stroke="#dfe9f5" strokeWidth="2.5" />
-      <path d="M 12 36 Q 60 25 108 36" stroke="#dfe9f5" strokeWidth="1.4" fill="none" opacity="0.7" />
+      <ellipse cx="60" cy="42" rx="52" ry="13" fill="#0b0e1c" stroke="#dfe9f5" strokeWidth="2.5" />
+      <path d="M 12 38 Q 60 27 108 38" stroke="#dfe9f5" strokeWidth="1.4" fill="none" opacity="0.7" />
       {/* rim lights */}
-      <circle cx="28" cy="45" r="1.8" fill="#9fd8ff" className="alien-orb" />
-      <circle cx="60" cy="48" r="1.8" fill="#9fd8ff" className="alien-orb" />
-      <circle cx="92" cy="45" r="1.8" fill="#9fd8ff" className="alien-orb" />
+      <circle cx="28" cy="47" r="1.8" fill="#9fd8ff" className="alien-orb" />
+      <circle cx="60" cy="50" r="1.8" fill="#9fd8ff" className="alien-orb" />
+      <circle cx="92" cy="47" r="1.8" fill="#9fd8ff" className="alien-orb" />
     </svg>
   );
 }
