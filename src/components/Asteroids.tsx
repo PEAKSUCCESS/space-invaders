@@ -50,6 +50,7 @@ const SHIP_X = 50;               // ship centre, % of scene width
 const SHIP_Y = 50;               // ship centre, % of scene height — dead centre
 const SHIP_RADIUS_PX = 30;       // collision radius around the ship centre
 const SHIELD_RADIUS_PX = 64;     // force-field radius while the ship is held
+const SHIELD_DRAIN_PER_SEC = 2;  // hull points burned per second while the field is up
 const SHARD_COUNT = 8;           // mini-asteroid shards per destroyed rock
 const DECOY_COUNT = 3;           // unlabeled rocks per wave — shootable space junk
 const DECOY_HEAL = 5;            // hull repaired by blasting a decoy rock
@@ -462,8 +463,11 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
   // Floating "+N" over the ship when a decoy/rocket kill repairs the hull.
   const [healFlash, setHealFlash] = useState<{ key: number; amount: number } | null>(null);
   // Force field: up only while the ship is held (mouse down / touch down).
+  // Holding it isn't free — the field burns SHIELD_DRAIN_PER_SEC hull points
+  // per second (fractional drain accumulates in the ref, applied whole).
   const [shieldOn, setShieldOn] = useState(false);
   const shieldRef = useRef(false);
+  const shieldDrainRef = useRef(0);
   // Hidden pineapple: rolled once per game (survives retries — at most one find).
   const [pineapple] = useState(() => rollPineapple(pineappleChance));
   const [pineappleFound, setPineappleFound] = useState(false);
@@ -530,6 +534,7 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
     e.preventDefault();
     if (gameOverRef.current) return;
     shieldRef.current = true;
+    shieldDrainRef.current = 0;
     setShieldOn(true);
   }
 
@@ -618,6 +623,25 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
       const dt = Math.min(0.05, (ts - last) / 1000); // clamp big tab-switch gaps
       const live = !pausedRef.current && !yipeeRef.current && !advancingRef.current && !gameOverRef.current && !doneRef.current;
       if (!live) return;
+      // Holding the force field costs hull: SHIELD_DRAIN_PER_SEC, applied in
+      // whole points as the fraction accumulates. Draining to 0 destroys the
+      // ship, same as a ram.
+      if (shieldRef.current) {
+        shieldDrainRef.current += SHIELD_DRAIN_PER_SEC * dt;
+        const burn = Math.floor(shieldDrainRef.current);
+        if (burn > 0) {
+          shieldDrainRef.current -= burn;
+          hullRef.current = Math.max(0, hullRef.current - burn);
+          setHull(hullRef.current);
+          if (hullRef.current <= 0) {
+            shieldRef.current = false;
+            setShieldOn(false);
+            gameOverRef.current = true;
+            setGameOver(true);
+            return;
+          }
+        }
+      }
       const { w, h } = sceneSizeRef.current;
       const st = statusRef.current;
       for (const [id, k] of kinRef.current) {
