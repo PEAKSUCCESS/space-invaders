@@ -1063,22 +1063,23 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
    rock — an elongated glowing tail (rotated to the flight line via --ang) with
    a white-hot head leading the way. */
 .ast-bullet {
-  position: absolute; width: 44px; height: 5px; border-radius: 3px;
+  position: absolute; width: 78px; height: 6px; border-radius: 3px;
   background: linear-gradient(90deg,
-    rgba(255, 170, 80, 0) 0%,
-    rgba(255, 190, 110, 0.55) 45%,
-    rgba(200, 235, 255, 0.95) 88%,
+    rgba(255, 120, 40, 0) 0%,
+    rgba(255, 140, 50, 0.7) 30%,
+    rgba(255, 190, 90, 0.95) 60%,
+    rgba(255, 235, 190, 1) 85%,
     #fff 100%);
-  box-shadow: 0 0 12px 3px rgba(160, 220, 255, 0.65);
+  box-shadow: 0 0 16px 4px rgba(255, 170, 90, 0.7), 0 0 28px 8px rgba(255, 130, 50, 0.35);
   z-index: 7; pointer-events: none;
-  animation: ast-shot 215ms linear forwards; /* keep in sync with BULLET_MS */
+  animation: ast-shot 307ms linear forwards; /* keep in sync with BULLET_MS */
 }
 .ast-bullet::after {
   content: ''; position: absolute; right: -3px; top: 50%;
   width: 10px; height: 10px; border-radius: 50%;
   transform: translateY(-50%);
   background: #fff;
-  box-shadow: 0 0 11px 4px rgba(255, 255, 255, 0.85), 0 0 20px 8px rgba(160, 220, 255, 0.45);
+  box-shadow: 0 0 12px 4px rgba(255, 255, 255, 0.9), 0 0 24px 10px rgba(255, 190, 100, 0.55);
 }
 @keyframes ast-shot {
   from { transform: translate(-50%, -50%) rotate(var(--ang)); }
