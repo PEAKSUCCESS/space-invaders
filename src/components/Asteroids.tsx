@@ -457,7 +457,7 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
   // dead (the correct rock, exploded). Reset when the wave changes.
   const [status, setStatus] = useState<Record<string, 'hot' | 'dead'>>({});
   const [aimDeg, setAimDeg] = useState(0);
-  const [bullet, setBullet] = useState<{ key: number; dx: number; dy: number } | null>(null);
+  const [bullet, setBullet] = useState<{ key: number; dx: number; dy: number; deg: number } | null>(null);
   const [shards, setShards] = useState<Shard[]>([]);
   const [shipHit, setShipHit] = useState(false);
   // Floating "+N" over the ship when a decoy/rocket kill repairs the hull.
@@ -755,7 +755,8 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
     const dx = ((k.x - SHIP_X) / 100) * w;
     const dy = ((k.y - SHIP_Y) / 100) * h;
     setAimDeg(Math.atan2(dx, -dy) * (180 / Math.PI));
-    setBullet({ key: ++bulletKeyRef.current, dx, dy });
+    // deg orients the tracer streak along the flight line (head toward the rock).
+    setBullet({ key: ++bulletKeyRef.current, dx, dy, deg: Math.atan2(dy, dx) * (180 / Math.PI) });
     window.setTimeout(() => resolveShot(r), BULLET_MS);
   }
 
@@ -957,7 +958,7 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
           <span
             key={bullet.key}
             className="ast-bullet"
-            style={{ left: `${SHIP_X}%`, top: `${SHIP_Y}%`, '--dx': `${bullet.dx}px`, '--dy': `${bullet.dy}px` } as CSSProperties}
+            style={{ left: `${SHIP_X}%`, top: `${SHIP_Y}%`, '--dx': `${bullet.dx}px`, '--dy': `${bullet.dy}px`, '--ang': `${bullet.deg}deg` } as CSSProperties}
             aria-hidden="true"
           />
         )}
