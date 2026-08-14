@@ -33,7 +33,7 @@ button { font-family: inherit; cursor: pointer; }
 
 .screen {
   width: 100%;
-  min-height: calc(100vh - 56px);
+  min-height: calc(100vh - var(--peak-header-h, 56px));
   padding: 32px 24px 104px;
   display: flex;
   flex-direction: column;
