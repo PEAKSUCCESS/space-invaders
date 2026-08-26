@@ -15,7 +15,13 @@
       /* Paint the cream background AND the PeakESL header on the first frame —
          the header is part of the static shell (below) so it never flashes in. */
       html, body { background: #FDFAF2; }
-      .peak-header-root { height: 56px; }
+      :root { --peak-header-h: 56px; }
+      .peak-header-root { height: var(--peak-header-h); }
+      /* Embedded (?embedded=1): the host page supplies its own chrome, so drop
+         ours entirely — the class is set by the head script below, before the
+         first paint, so the header never flashes in and back out. */
+      html.peak-embedded { --peak-header-h: 0px; }
+      html.peak-embedded .peak-header-root { display: none; }
       .peak-header {
         position: fixed; top: 0; left: 0; width: 100%; height: 56px; z-index: 60;
         box-sizing: border-box; background: #4a4f6d; display: flex; align-items: center;
@@ -30,6 +36,14 @@
       .peak-header-link, .peak-header-name { font-size: 14px; font-weight: 800; color: #fff; cursor: default; text-decoration: none; }
       a.peak-header-link.is-clickable { cursor: pointer; }
     </style>
+    <script>
+      // Runs while <head> parses — before the header markup below is painted —
+      // so ?embedded=1 hides the PeakESL bar with no flash. The hub forwards
+      // this param to every activity (buildLaunchUrl in its games.ts).
+      if (new URLSearchParams(location.search).get('embedded') === '1') {
+        document.documentElement.classList.add('peak-embedded');
+      }
+    </script>
   </head>
   <body>
     <!-- Static PeakESL header: part of the shell so it paints on the first frame

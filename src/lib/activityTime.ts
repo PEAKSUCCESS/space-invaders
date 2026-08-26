@@ -73,9 +73,15 @@ export function flushActivity(keepalive = false): void {
 
 const PINEAPPLE_WINDOW_DAYS = 14;
 
-// TEMP (Brad, 2026-07-10): force a 100% spawn while the rollout is reviewed.
-// Set back to false to restore the usage bands below.
-const PINEAPPLE_FORCE_100 = false;
+// Forces a 100% spawn, for testing. Driven by an env var rather than a
+// checked-in constant: a hardcoded `true` reaches every game through sync.mjs
+// and a collected pineapple credits real PeakESL tokens, so the switch must not
+// be committable. Set VITE_PINEAPPLE_FORCE_100=1 in a game's .env.local, which
+// is gitignored (its plain .env is NOT) and higher-precedence in Vite. Vite
+// inlines this at build time, so a dev server needs restarting to pick it up.
+// Production never sets the var, so it cannot leak there by any path.
+const PINEAPPLE_FORCE_100 =
+  (import.meta.env.VITE_PINEAPPLE_FORCE_100 as string | undefined) === '1';
 
 /** Map 14-day active seconds → spawn probability (0–1). Bands per Brad. */
 export function pineappleChance(totalSeconds: number): number {
