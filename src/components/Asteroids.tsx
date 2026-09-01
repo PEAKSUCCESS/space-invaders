@@ -285,14 +285,14 @@ function PineappleUfo() {
       </g>
       {/* dome glass over the stowaway */}
       <path d="M34 32 Q 34 2 60 2 Q 86 2 86 32 Z"
-        fill="rgba(159, 216, 255, 0.1)" stroke="#c9d8ea" strokeWidth="2" strokeLinejoin="round" />
+        fill="rgba(255, 180, 80, 0.08)" stroke="#E8E4D8" strokeWidth="2" strokeLinejoin="round" />
       {/* saucer hull — covers the dome base and the pineapple's lower half */}
-      <ellipse cx="60" cy="42" rx="52" ry="13" fill="#0b0e1c" stroke="#dfe9f5" strokeWidth="2.5" />
-      <path d="M 12 38 Q 60 27 108 38" stroke="#dfe9f5" strokeWidth="1.4" fill="none" opacity="0.7" />
+      <ellipse cx="60" cy="42" rx="52" ry="13" fill="#00112B" stroke="#E8E4D8" strokeWidth="2.5" />
+      <path d="M 12 38 Q 60 27 108 38" stroke="#E8E4D8" strokeWidth="1.4" fill="none" opacity="0.7" />
       {/* rim lights */}
-      <circle cx="28" cy="47" r="1.8" fill="#9fd8ff" className="alien-orb" />
-      <circle cx="60" cy="50" r="1.8" fill="#9fd8ff" className="alien-orb" />
-      <circle cx="92" cy="47" r="1.8" fill="#9fd8ff" className="alien-orb" />
+      <circle cx="28" cy="47" r="1.8" fill="#FFB450" className="alien-orb" />
+      <circle cx="60" cy="50" r="1.8" fill="#FFB450" className="alien-orb" />
+      <circle cx="92" cy="47" r="1.8" fill="#FFB450" className="alien-orb" />
     </svg>
   );
 }
@@ -372,17 +372,17 @@ function CruiserSvg({ flip = false, slogan = false }: { flip?: boolean; slogan?:
       <polygon className="ast-flame" points="14,26 -2,30 14,34" fill="#ffa73a" stroke="#ffd9a0" strokeWidth="1" />
       <polygon className="ast-flame" points="16,38 4,41 16,44" fill="#ffa73a" stroke="#ffd9a0" strokeWidth="1" />
       {/* tail fin */}
-      <path d="M18 30 L6 10 L34 22 Z" fill="#141b33" stroke="#9fb4cc" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M18 30 L6 10 L34 22 Z" fill="#001A4A" stroke="#B0A99A" strokeWidth="2" strokeLinejoin="round" />
       {/* hull */}
       <path d="M14 30 Q 20 16 58 13 L 130 13 Q 168 17 176 30 Q 168 43 130 47 L 58 47 Q 20 44 14 30 Z"
-        fill="#0e1430" stroke="#c9d8ea" strokeWidth="2.5" strokeLinejoin="round" />
+        fill="#03184D" stroke="#E8E4D8" strokeWidth="2.5" strokeLinejoin="round" />
       {/* cockpit dome */}
-      <path d="M132 13 Q 145 1 160 12 Z" fill="#9fd8ff" stroke="#c9d8ea" strokeWidth="2" strokeLinejoin="round" opacity="0.9" />
+      <path d="M132 13 Q 145 1 160 12 Z" fill="#FFB450" stroke="#E8E4D8" strokeWidth="2" strokeLinejoin="round" opacity="0.9" />
       {/* the PeakESL logo across the hull (white wordmark — made for dark hulls) */}
       {slogan ? (
         <>
           <image href="/peak_logo.png" x="56" y="16" width="80" height="14" />
-          <text x="96" y="41" textAnchor="middle" fontSize="9.5" fontWeight="800" fontStyle="italic" fill="#ffd9a0" fontFamily="inherit">
+          <text x="96" y="41" textAnchor="middle" fontSize="9.5" fontWeight="800" fontStyle="italic" fill="#DEB736" fontFamily="inherit">
             Speech is Power
           </text>
         </>
@@ -390,8 +390,8 @@ function CruiserSvg({ flip = false, slogan = false }: { flip?: boolean; slogan?:
         <image href="/peak_logo.png" x="48" y="21" width="96" height="17" transform={flip ? 'scale(-1 1) translate(-192 0)' : undefined} />
       )}
       {/* running lights */}
-      <circle cx="30" cy="30" r="1.8" fill="#7ef29a" className="alien-orb" />
-      <circle cx="168" cy="30" r="1.8" fill="#ff8a5a" className="alien-orb" />
+      <circle cx="30" cy="30" r="1.8" fill="#8BAFA6" className="alien-orb" />
+      <circle cx="168" cy="30" r="1.8" fill="#D66B42" className="alien-orb" />
     </svg>
   );
 }
@@ -406,8 +406,8 @@ function RocketSvg() {
       <path d="M14 13 L8 23 L24 17 Z" fill="#c34a4a" stroke="#802f2f" strokeWidth="1" strokeLinejoin="round" />
       {/* body + nose cone */}
       <path d="M14 13 Q 16 6 34 6 L 46 6 Q 58 9 62 13 Q 58 17 46 20 L 34 20 Q 16 20 14 13 Z"
-        fill="#dfe9f5" stroke="#52616c" strokeWidth="1.6" strokeLinejoin="round" />
-      <circle cx="38" cy="13" r="3.4" fill="#9fd8ff" stroke="#52616c" strokeWidth="1.2" />
+        fill="#E8E4D8" stroke="#6D6D6D" strokeWidth="1.6" strokeLinejoin="round" />
+      <circle cx="38" cy="13" r="3.4" fill="#FFB450" stroke="#6D6D6D" strokeWidth="1.2" />
     </svg>
   );
 }
@@ -416,11 +416,11 @@ function RocketSvg() {
 // Battle damage appears as the hull degrades: scuffs below 75, a crack and
 // embers below 50, a glowing breach + dulled outline below 25.
 function ShipSvg({ hull }: { hull: number }) {
-  const outline = hull > 50 ? '#eaf6ff' : hull > 25 ? '#ffd9b8' : '#ff9a7a';
+  const outline = hull > 50 ? '#E8E4D8' : hull > 25 ? '#ffd9b8' : '#ff9a7a';
   return (
     <svg viewBox="0 0 48 66" className="ast-ship-svg" role="img" aria-label="your ship">
       <polygon className="ast-flame" points="24,46 30,54 24,64 18,54" fill="#ffa73a" stroke="#ffd9a0" strokeWidth="1" />
-      <polygon points="24,2 42,52 24,42 6,52" fill="#0b1022" stroke={outline} strokeWidth="2.5" strokeLinejoin="round" />
+      <polygon points="24,2 42,52 24,42 6,52" fill="#00112B" stroke={outline} strokeWidth="2.5" strokeLinejoin="round" />
       <line x1="15" y1="38" x2="33" y2="38" stroke={outline} strokeWidth="1.6" />
       {hull < 75 && (
         <g stroke="#4a5a72" strokeWidth="1.6" strokeLinecap="round">
@@ -868,7 +868,7 @@ export function Asteroids({ rounds, pool, language, avatarId, audio = true, paus
     return <div className="ast-clue-card"><span className="ast-clue-word">{word}</span></div>;
   }
 
-  const hullColor = hull > 50 ? '#42d977' : hull > 25 ? '#ffb22f' : '#ff5a5a';
+  const hullColor = hull > 50 ? '#8BAFA6' : hull > 25 ? '#DEB736' : '#D66B42';
 
   return (
     <div className="ast-game">

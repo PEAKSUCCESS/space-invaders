@@ -149,7 +149,28 @@ Every challenge shows a small **"Give feedback"** link in the topbar (`App` chro
 
 ## Theme & typography
 
-Light theme with a cream background and orange accents (`src/index.css` `:root`): `--bg:#FDFAF2`, `--panel:#f4ead4`, `--accent:#EC7700`, `--tile-bg:#FFB22F`, `--tile-selected:#ffd07a`, `--text:#2a1f0a`, `--muted:#7a6a4f`. Font is **Montserrat** (Google Fonts via `<link>` in `index.html`), with system fallbacks.
+The **JIFU demo theme**, mirroring the sibling `peak-esl` repo on its `demo` branch (`apps/peak-esl/tailwind.config.ts` + the homepage's `PagePanel` / `ActionTile` / `Guide` / `Buttons`), and matching the sibling `balloons` app. Values are JIFU's registered palette copied from that config, not eyedropped.
+
+Three layers, and the rule that follows from them:
+
+1. **Ground** — `--ground:#002B6B` (peak-navy-alt) on every screen; `--header:#03184D` (peak-dark-gray) for the site header in `index.html` and the in-lesson `.topbar` under it.
+2. **Panel** — `.section` is the gold wash: `--panel-wash:rgba(222,183,54,.25)` inside a `--panel-line:#FFB450` hairline, `rounded-lg`, `--card-shadow:0 2px 6px rgba(0,0,0,.15)`. Its `h2` is **white**.
+3. **Card** — `.card` is white, same radius and shadow. Anything on the wash is **either white text or a white card**: dark body copy on the wash is 2.18:1, so `.journey` and the streak buckets each ride a `.card`.
+
+Other tokens (`src/index.css` `:root`): `--gold:#DEB736` / `--gold-600:#C6A02E` / `--gold-800:#A68526` (primary action, hover, pressed), `--beige:#E8E4D8`, `--orchid:#9C3D97`, `--text:#0F1117`, `--muted:#6D6D6D`, `--line:#D8D6D0`, `--light:#F5F2E8`, `--teal:#8BAFA6` ("correct", on the navy), `--error:#D66B42`, `--on-ground`/`--on-ground-muted` for copy on the navy.
+
+Two contrast rules the rebrand established, worth keeping when adding UI:
+
+- **Anything gold carries a black label.** White on `#DEB736` is 1.9:1; black is 10.9:1. `.primary-btn`, `.tile`, `.climb-choice`, the selected `.area-chip`, `.play-btn` and both game-over retry buttons all do this.
+- **Gold text only on the navy** (7.4:1 — the topbar's "Give feedback" link, the Asteroids HUD). On white it's 2.6:1, so use `--orchid` there instead (the `.word-info-btn` ring, the YIPEE title).
+
+Buttons are the demo's two variants: `.primary-btn` is gold with a hard `0 2px 0 0 --gold-600` shadow, `.ghost-btn` / `.skip-btn` / `.area-chip` are white on `--beige` with the matching beige shadow; all are pill-radius, bold, 300ms. The `.avatar-header` reproduces `Guide` — unframed circular avatar beside a white bubble with a 2px beige border, a `0 3px 0 0` beige shadow and a two-layer triangle (points left on desktop, up when the row stacks under 640px).
+
+**The Asteroids scene** is drawn from the same palette rather than a neutral black: the panel is `#00112B` and the starfield a radial `#063A7D → #001A4A → #000D20`, i.e. deep space read out of the ground's own navy. The HUD (wave counter, `HULL` label and bar) is gold on that navy; the clue card is `--header` inside a `--panel-line` hairline; rocks, shards and the ship's undamaged outline are `--beige` vector strokes on a `#00112B` fill, with decoys a dimmer `#8E8B84` so the choice rocks stay the loud ones; the shield and the `+N` repair floats are `--teal`, and "Ship destroyed!" is `--error`. The cruiser flies JIFU colors (a `--header` hull, beige plating, `#FFB450` glass, gold "Speech is Power").
+
+Font is **DM Sans** (Google Fonts via `<link>` in `index.html`, matching peak-esl's `--font-dm-sans`), Montserrat and system fonts as fallbacks. `public/peak_logo.png` and `public/favicon.ico` are the JIFU wordmark, copied from peak-esl under the filenames the shell already referenced.
+
+Colours that **encode state rather than brand are deliberately not rebranded**: the level colours (`LEVELS` in `StartScreen.tsx`, `BUCKETS` in `StreakBuckets.tsx`), the `CountdownDial`'s ahead/close/behind greens and reds, the hot-rock molten orange, and the ship's damage states. The demo left its own semantic colours alone for the same reason, and gold/teal fail as text on the dial's white face (2.6:1 and 2.2:1).
 
 ## Commands
 

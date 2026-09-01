@@ -104,6 +104,9 @@ export function StreakBuckets({ userId, language, thresholds }: Props) {
   return (
     <section className="section">
       <h2>{t('start.yourWords')}</h2>
+      {/* The books, their counts and the word list are all dark copy, so they
+          ride a white card rather than the panel's gold wash. */}
+      <div className="card">
       <div className="streak-buckets">
         {BUCKETS.map((b) => (
           <button
@@ -137,6 +140,7 @@ export function StreakBuckets({ userId, language, thresholds }: Props) {
           )}
         </div>
       )}
+      </div>
     </section>
   );
 }

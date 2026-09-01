@@ -35,7 +35,7 @@ export function CountdownDial({ startTime, targetMs, label }: Props) {
   return (
     <div className={`countdown-dial${behind ? ' behind' : ''}`} aria-hidden="true">
       <svg viewBox="0 0 80 80" width="66" height="66">
-        <circle cx="40" cy="40" r="37" fill="#fffdf6" stroke="#e2d5b0" strokeWidth="2" />
+        <circle cx="40" cy="40" r="37" fill="#fff" stroke="#D8D6D0" strokeWidth="2" />
         {Array.from({ length: 12 }).map((_, i) => {
           const a = (i / 12) * 2 * Math.PI;
           return (
@@ -43,17 +43,17 @@ export function CountdownDial({ startTime, targetMs, label }: Props) {
               key={i}
               x1={40 + 33 * Math.sin(a)} y1={40 - 33 * Math.cos(a)}
               x2={40 + 36.5 * Math.sin(a)} y2={40 - 36.5 * Math.cos(a)}
-              stroke="#cbb98d" strokeWidth="1.4"
+              stroke="#B0A99A" strokeWidth="1.4"
             />
           );
         })}
-        <circle cx="40" cy="40" r={R} fill="none" stroke="#eee3c6" strokeWidth="5" />
+        <circle cx="40" cy="40" r={R} fill="none" stroke="#F5F2E8" strokeWidth="5" />
         <circle
           cx="40" cy="40" r={R} fill="none" stroke={color} strokeWidth="5" strokeLinecap="round"
           strokeDasharray={`${frac * C} ${C}`} transform="rotate(-90 40 40)"
         />
         <line x1="40" y1="40" x2={hx} y2={hy} stroke={color} strokeWidth="2.6" strokeLinecap="round" />
-        <circle cx="40" cy="40" r="12" fill="#fffdf6" />
+        <circle cx="40" cy="40" r="12" fill="#fff" />
         <text x="40" y="44.5" textAnchor="middle" fontSize="14" fontWeight="800" fill={color}>
           {behind ? `+${mmss(-remaining)}` : mmss(remaining)}
         </text>

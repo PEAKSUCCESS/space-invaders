@@ -160,13 +160,18 @@ export function StartScreen({ initial, lessonsCompleted, progress, onProgress, o
   return (
     <div className="screen start-screen">
       <div className="avatar-header">
-        <AvatarBadge avatar={currentAvatar} size={120} />
+        <AvatarBadge avatar={currentAvatar} size={130} />
         <div className="speech-bubble">{t('app.welcome')}</div>
       </div>
 
       {!!userId && <StreakBuckets userId={userId} language={nativeLanguage} thresholds={thresholds} />}
 
       <Section title={t('start.yourProgress')}>
+        {/* White card: the bar's labels, %, and level names are dark copy, and
+            dark copy on the gold wash is 2.18:1. Everything readable inside a
+            panel gets a card under it — the same rule the demo's homepage
+            tiles follow. */}
+        <div className="card">
         <div className="journey">
           {showPct && (
             <div className="journey-avatar" style={{ left: `${fillPct}%` }}>
@@ -202,6 +207,7 @@ export function StartScreen({ initial, lessonsCompleted, progress, onProgress, o
           <button type="button" className="ghost-btn small" disabled={selectedIndex >= LEVELS.length - 1} onClick={goNext}>
             {t('start.next')}
           </button>
+        </div>
         </div>
       </Section>
 
