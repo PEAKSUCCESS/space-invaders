@@ -1,10 +1,10 @@
 import type { AreaCode, Profile, ProgressResponse } from '../types';
 
-const KEY = 'peakvocabSpaceSave';
+const KEY = 'peakvocabSpaceInvadersSave';
 // Last fetched /progress, cached so the bar seeds from the real % after a reload
 // (animating to the new value) instead of starting at 0. Kept separate from the
 // profile save so the frequent profile writes never clobber it.
-const KEY_PROGRESS = 'peakvocabSpaceProgress';
+const KEY_PROGRESS = 'peakvocabSpaceInvadersProgress';
 
 export interface SaveState extends Profile {
   /** How many lessons this shopper has finished (gates the progress %). */

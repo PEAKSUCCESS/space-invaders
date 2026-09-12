@@ -33,7 +33,7 @@ function tagFor(lang: LanguageCode | 'en'): string {
   return BCP47[lang] ?? lang;
 }
 
-const VOLUME_KEY = 'peakvocabSpaceVolume';
+const VOLUME_KEY = 'peakvocabSpaceInvadersVolume';
 export const DEFAULT_VOLUME = 0.36;
 
 let volume: number = (() => {
