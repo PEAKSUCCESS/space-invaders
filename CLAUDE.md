@@ -2,18 +2,6 @@
 
 **Space** is a Vite + React + TypeScript vocabulary game — a clone of the Survival app (peakvocab-survival) — over the **peakvocab-api** corpus. The main loop is **"Asteroids"**, a retro Atari-style space shooter (see "The game: Asteroids" under What it does); it plays the same lesson data the Survival clone's Climb to Safety used (the climb component is retained, unrendered). Sibling to (and lighter than) the 3D R3F hiking app.
 
-## Repo boundary (hard rule)
-
-**Work is restricted to THIS repo (`space`). Never edit, create, or delete files in any other repo** — notably the sibling backend `../peakvocab-api`, or any HQ/export repo. When a change is needed in another project (e.g. the `/api/vocab/tts` endpoint), **describe it** — exact code/diff as text — so Brad can copy/paste it into that project himself. Reading other repos for context is fine; modifying them is not.
-
-## What it does
-
-The app is launched by **peak-launchpad (PLP)** with the shopper's identity in the URL: `?userID=<cuid>&nativeLanguage=es&avatar=ivy` (parsed in `src/lib/launchParams.ts`; the shopper id is an **opaque CUID string** sent as **`userID`** — `userId`/`user_id` casings also accepted — and falls back to `VITE_DEV_USER_ID` for local dev). The legacy numeric `distID` is no longer sent or accepted, and the id is never coerced to a number. PLP also sends `token`/`shopperName`/`shopperEmail`/`callbackURL`/`mode`; `shopperName`/`shopperEmail` are used (→ `LaunchParams.userName`/`userEmail`, to attribute feedback) and **`callbackURL`** is the hub return URL — the app navigates back to it when a lesson is **completed or quit** (`returnToLanding` in `App.tsx`; falls back to the start screen when absent, and only http(s) URLs are accepted). `token`/`mode` are ignored. The shopper lands on the start screen (avatar header + speech bubble, **journey/progress bar**, **topic picker**, audio toggle). Level (Beginner/Intermediate/Advanced) and topics are picked here; `userId`, native language, and avatar come from PLP.
-
-Everything is driven by the **new user-centric peakvocab-api** (see "Vocabulary source"). The API owns a per-user **20-word bin**, does **server-side streak scoring** (correct → streak +1; at streak 20 the word is `completed`, leaves the bin, a replacement is drawn; a wrong answer drops it a level), and reports **real per-level progress**. The app no longer builds lessons from a local word list — it reads the bin and submits answers.
-
-Hitting **Start** builds a **lesson** of `LESSON_LENGTH = 15` word challenges (`src/game/lesson.ts`) from the bin and runs them back-to-back. When all 15 finish, a `LessonComplete` overlay shows Fireworks + "Great job!" (and a level-up note if the API auto-advanced the level), then returns to the landing page — where the progress bar now reflects the live `/progress`.
-
 ### Start → lesson flow (`buildLesson` in `src/game/lesson.ts`)
 
 1. `enrollUser({userId, nativeLanguage, avatar, level, areas})` — idempotent; first call auto-fills the 20-word bin. Avatar is lowercased on the wire (`jade`).

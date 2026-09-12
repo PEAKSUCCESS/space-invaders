@@ -183,6 +183,25 @@ function App() {
     window.setTimeout(onChallengeComplete, 700);
   }
 
+  // Tell PeakESL that something finished, so the streak pill and its
+  // celebration land while the learner is still on the celebrate screen rather
+  // than up to an hour later when PeakESL's cron next sweeps.
+  //
+  // Ordering is the whole contract: this must fire only AFTER the completion
+  // row is written. PeakESL treats the message purely as a hint to go and look
+  // — it re-derives the qualifying days from the completions API itself — so
+  // one that arrives first finds nothing and the streak silently misses a day.
+  // That is also why it carries no payload: a forged or replayed message can
+  // only cause a recompute that finds nothing, never manufacture a day.
+  //
+  // Only meaningful when the hub has us framed; a direct visit has no parent
+  // to tell.
+  function notifyActivityCompleted() {
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'peakvocab:activity-completed' }, '*');
+    }
+  }
+
   function onChallengeComplete() {
     if (phase.kind !== 'challenge' || !lesson) return;
     const nextIndex = phase.index + 1;
@@ -198,10 +217,18 @@ function App() {
       setFlawless(isFlawless);
       setTimeResult(null);
       // Record to the global leaderboard (skip the stage-only PICS ONLY review).
+      //
+      // The same row is what earns a PeakESL streak day: its hourly sweep and
+      // its trigger both re-read the completions API, which is backed by these
+      // leaderboard rows. So the row already written here is the whole of the
+      // streak contribution — only the nudge below is new.
       if (profile && !profile.picsOnly) {
         setRankPending(true);
         submitTime({ userId: profile.userId, app: 'space', durationMs, wrongCount: wrongCountRef.current, rounds, level: profile.difficulty })
-          .then((r) => setTimeResult(r))
+          .then((r) => {
+            setTimeResult(r);
+            notifyActivityCompleted();
+          })
           .catch((e) => console.warn('submitTime failed', e))
           .finally(() => setRankPending(false));
       }
