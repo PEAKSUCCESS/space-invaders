@@ -1,20 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { AnswerMode, Difficulty, Phase, Profile, ProgressResponse } from './types';
+import type { AnswerMode, ApiWord, Difficulty, Phase, Profile, ProgressResponse } from './types';
 import { StartScreen } from './components/StartScreen';
 import { MatchingTiles } from './components/MatchingTiles';
 import { HearAndChoose } from './components/HearAndChoose';
 import { TranslateWhatYouHear } from './components/TranslateWhatYouHear';
 import { PickOne } from './components/PickOne';
 import { Asteroids } from './components/Asteroids';
+import { SpaceInvaders } from './components/SpaceInvaders';
 import { LessonComplete } from './components/LessonComplete';
 import { FeedbackModal, type FeedbackContext } from './components/FeedbackModal';
 import { fireConfetti } from './components/effects/Confetti';
 import { playCorrect } from './lib/sound';
 import { buildLesson, type Lesson, type LessonStep } from './game/lesson';
-import { awardPineappleFind, completeWord, fetchBestTime, imageUrl, submitAnswer, submitFeedback, submitTime, type TimeResult } from './lib/appApi';
+import { awardPineappleFind, completeWord, fetchBestScore, imageUrl, submitAnswer, submitFeedback, submitScore, submitTime, type ScoreResult, type TimeResult } from './lib/appApi';
+import type { InvadersResult } from './game/invadersEngine';
 import { fetchPineappleChance, flushActivity, initActivityTracking, pineappleChance } from './lib/activityTime';
 import { DEFAULT_CONFIG, loadGameConfig, type GameConfig } from './lib/gameConfig';
-import { loadProgress, loadSave, writeProgress, writeSave, type SaveState } from './game/save';
+import { loadHighScore, loadProgress, loadSave, writeHighScore, writeProgress, writeSave, type SaveState } from './game/save';
 import { parseLaunchParams } from './lib/launchParams';
 import { CHALLENGES_HUB_URL } from './lib/env';
 import { t } from './i18n/i18n';
@@ -60,6 +62,12 @@ function App() {
   const [gameConfig, setGameConfig] = useState<GameConfig>(DEFAULT_CONFIG);
   const [raceTargetMs, setRaceTargetMs] = useState<number>(DEFAULT_CONFIG.parTimeMs);
   const [raceLabel, setRaceLabel] = useState<'best' | 'par'>('par');
+  // Space Invaders: the run's result + its score-board rank, the HI-SCORE to
+  // beat, and the word on the cannon right now (so feedback names it).
+  const [invResult, setInvResult] = useState<InvadersResult | null>(null);
+  const [scoreResult, setScoreResult] = useState<ScoreResult | null>(null);
+  const [bestScore, setBestScore] = useState(loadHighScore);
+  const [liveWord, setLiveWord] = useState<ApiWord | null>(null);
 
   function handleProgress(p: ProgressResponse) {
     setProgress(p);
@@ -126,14 +134,17 @@ function App() {
       setFlawless(false);
       setTimeResult(null);
       setRankPending(false);
-      // Countdown-dial target: the current best flawless time if there is one, else
-      // the config par time. Fire-and-forget so a missing/slow endpoint never blocks.
+      setInvResult(null);
+      setScoreResult(null);
+      setLiveWord(null);
       setRaceTargetMs(cfg.parTimeMs);
       setRaceLabel('par');
+      // The board's high score for the attract screen. Fire-and-forget so a
+      // missing/slow endpoint never blocks; this device's best shows meanwhile.
       if (!p.picsOnly) {
-        fetchBestTime('spaceinvaders')
-          .then((b) => { if (b.bestMs && b.bestMs > 0) { setRaceTargetMs(b.bestMs); setRaceLabel('best'); } })
-          .catch(() => { /* no leaderboard yet → race the par time */ });
+        fetchBestScore('spaceinvaders')
+          .then((b) => { if (b.bestScore) setBestScore((s) => Math.max(s, b.bestScore!)); })
+          .catch(() => { /* no board yet → local best only */ });
       }
       setPhase({ kind: 'challenge', index: 0 });
     } catch (e) {
@@ -221,7 +232,7 @@ function App() {
       // The same row is what earns a PeakESL streak day: its hourly sweep and
       // its trigger both re-read the completions API, which is backed by these
       // leaderboard rows. So the row already written here is the whole of the
-      // streak contribution — only the nudge below is new.
+      // streak contribution — only the nudge is new.
       if (profile && !profile.picsOnly) {
         setRankPending(true);
         submitTime({ userId: profile.userId, app: 'spaceinvaders', durationMs, wrongCount: wrongCountRef.current, rounds, level: profile.difficulty })
@@ -236,6 +247,32 @@ function App() {
       return;
     }
     setPhase({ kind: 'challenge', index: nextIndex });
+  }
+
+  // A Space Invaders session ended — cleared or out of cannons; progress counts
+  // either way. Practice runs (no clock) and PICS ONLY reviews stay off the board,
+  // so they write no completion row and send no streak nudge either.
+  function onInvadersComplete(result: InvadersResult) {
+    if (!profile) return;
+    const n = lessonsCompleted + 1;
+    setLessonsCompleted(n);
+    writeSave({ ...profile, lessonsCompleted: n, lastUpdated: Date.now() });
+    setInvResult(result);
+    setScoreResult(null);
+    setLiveWord(null);
+    if (!result.practice && !profile.picsOnly) {
+      writeHighScore(result.score);
+      setRankPending(true);
+      // The score row is this game's completion row (see notifyActivityCompleted).
+      submitScore({ userId: profile.userId, app: 'spaceinvaders', score: result.score, wrongCount: result.missed, level: profile.difficulty })
+        .then((r) => {
+          setScoreResult(r);
+          notifyActivityCompleted();
+        })
+        .catch((e) => console.warn('submitScore failed', e))
+        .finally(() => setRankPending(false));
+    }
+    setPhase({ kind: 'celebrate' });
   }
 
   // This game has no landing screen of its own — finishing a lesson or quitting
@@ -315,11 +352,10 @@ function App() {
         onDone={onCelebrationDone}
         levelUp={levelUp}
         audio={profile?.audio ?? true}
-        timeMs={lessonTimeMs}
-        flawless={flawless}
         ranking={rankPending}
-        rank={timeResult?.rank ?? null}
-        totalFlawless={timeResult?.totalFlawless ?? null}
+        {...(invResult
+          ? { invaders: invResult, rank: scoreResult?.rank ?? null, total: scoreResult?.total ?? null }
+          : { timeMs: lessonTimeMs, flawless, rank: timeResult?.rank ?? null, totalFlawless: timeResult?.totalFlawless ?? null })}
       />
     );
   }
@@ -328,7 +364,7 @@ function App() {
 
   const step = lesson.steps[phase.index];
   const stepKey = `${lesson.number}-${phase.index}-${step.kind}`;
-  const feedbackCtx = feedbackContextFor(step);
+  const feedbackCtx = feedbackContextFor(step, liveWord);
 
   async function handleSubmitFeedback(message: string) {
     if (!profile) return;
@@ -368,7 +404,27 @@ function App() {
         </div>
       </div>
 
-      {/* The climb-round lesson data now plays as the Asteroids space shooter. */}
+      {step.kind === 'invaders' && (
+        <SpaceInvaders
+          key={stepKey}
+          targets={step.targets}
+          pool={step.pool}
+          language={profile.nativeLanguage}
+          avatarId={profile.avatarId}
+          audio={profile.audio}
+          paused={feedbackOpen}
+          config={gameConfig}
+          picsOnly={step.picsOnly}
+          pineappleChance={pineappleOdds}
+          bestScore={bestScore}
+          onAnswer={handleAnswer}
+          onLive={setLiveWord}
+          onComplete={onInvadersComplete}
+          onPineappleFound={() => void awardPineappleFind(profile.userId, 'spaceinvaders')}
+        />
+      )}
+
+      {/* Retained: climb-round lessons play as the Asteroids space shooter. */}
       {step.kind === 'climb' && (
         <Asteroids
           key={stepKey}
@@ -438,9 +494,9 @@ function App() {
         />
       )}
 
-      {/* The asteroids game paces itself (15 waves, incoming rocks), so it has
-          no per-step Skip/Remove controls — only the topbar Quit. */}
-      {step.kind !== 'climb' && (
+      {/* The arcade games pace themselves, so they have no per-step
+          Skip/Remove controls — only the topbar Quit. */}
+      {step.kind !== 'climb' && step.kind !== 'invaders' && (
         <div className="skip-bar">
           <button type="button" className="skip-btn" onClick={onChallengeComplete}>
             {t('chrome.skip')}
@@ -470,10 +526,14 @@ function App() {
 }
 
 // Build the feedback context (challenge type + the picture/word/sentence it's
-// about) from the current step.
-function feedbackContextFor(step: LessonStep): FeedbackContext {
+// about) from the current step — for Space Invaders, the word on the cannon.
+function feedbackContextFor(step: LessonStep, liveWord: ApiWord | null): FeedbackContext {
   const challengeType = labelForStep(step);
   switch (step.kind) {
+    case 'invaders':
+      return liveWord
+        ? { challengeType, challengeKind: step.kind, senseId: liveWord.senseId, word: liveWord.english, pictureUrl: imageUrl(liveWord) ?? undefined }
+        : { challengeType, challengeKind: step.kind };
     case 'climb':
       return { challengeType, challengeKind: step.kind, word: step.rounds.map((r) => r.target.english).join(', ') };
     case 'pick':
@@ -496,6 +556,8 @@ function feedbackContextFor(step: LessonStep): FeedbackContext {
 
 function labelForStep(step: LessonStep): string {
   switch (step.kind) {
+    case 'invaders':
+      return t('challenge.invaders');
     case 'climb':
       return t('challenge.asteroids');
     case 'match':

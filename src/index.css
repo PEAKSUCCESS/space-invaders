@@ -900,6 +900,30 @@ h2 { font-size: 22px; margin: 0 0 12px; color: var(--muted); font-weight: 500; }
   20%, 40%, 60%, 80% { transform: translateX(8px); }
 }
 
+/* ─── Space Invaders (320×256 canvas, scaled in whole device pixels) ─── */
+.inv-game {
+  position: relative;
+  height: calc(100vh - 108px); /* fallback for browsers without dvh */
+  height: calc(100dvh - 108px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin: 0 8px;
+  border-radius: 18px 18px 0 0;
+  background: #000;
+}
+.inv-canvas {
+  display: block;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  touch-action: none; /* drag-to-move and tap-to-fire, never a page scroll or zoom */
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+}
+.inv-canvas:focus-visible { box-shadow: 0 0 0 2px var(--tile-bg); }
+
 /* ─── Asteroids game (retro Atari space shooter) ─── */
 .ast-game {
   position: relative;
