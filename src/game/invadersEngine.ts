@@ -84,6 +84,20 @@ const SAUCER_ART = [
   '.##############.',
   '....#......#....',
 ];
+// Word-carrier hulls: each formation row is a different colour of alien ship
+// (gold outline, a domed cockpit with eyes on top, running lights along the
+// belly). Red and green stay reserved for wrong / right, amber for the answer
+// pulse — so hulls use magenta, violet and teal, and UFO rounds fly gold.
+interface Hull { body: string; shade: string; edge: string; dome: string }
+const HULLS: Hull[] = [
+  { body: '#FF4FB8', shade: '#A82A77', edge: '#FFB22F', dome: '#3FF3FF' },
+  { body: '#9B5CFF', shade: '#5B2DB5', edge: '#FFB22F', dome: '#3FF3FF' },
+  { body: '#14C8B4', shade: '#0A7A6E', edge: '#FFE3A3', dome: '#FF6AD5' },
+];
+const UFO_HULL: Hull = { body: '#FFB22F', shade: '#7A4B00', edge: '#FFE3A3', dome: '#FF6AD5' };
+const WRONG_HULL: Hull = { body: '#5F6573', shade: '#3A3F4A', edge: '#FF4C4C', dome: '#5F6573' };
+const SCREEN = '#070B1E';
+
 const BOMB_ART = [['.#.', '#..', '.#.', '..#', '.#.'], ['.#.', '..#', '.#.', '#..', '.#.']];
 
 const ROUND_LABEL: Record<RoundKind, StringKey> = { A: 'inv.roundA', B: 'inv.roundB', C: 'inv.roundC', D: 'inv.roundD' };
@@ -97,7 +111,7 @@ const NOTE_SEC = 2.4;
 const NOTE_Y = CANNON_TOP - 30; // clear of the SHIELDS DOWN / SLOW status line
 
 interface LiveTile { def: TileDef; col: number; state: 'idle' | 'wrong' | 'scanned' | 'hit' }
-interface Row { prompt: Prompt; tiles: Array<LiveTile | null> }
+interface Row { prompt: Prompt; tiles: Array<LiveTile | null>; hull: number }
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; colors: readonly string[] }
 interface Floater { x: number; y: number; text: string; color: string; t: number; life: number }
 interface Bomb { x: number; y: number; vx: number; seg: number }
@@ -252,7 +266,7 @@ export class InvadersEngine {
     const words = o.targets.length > 0 ? o.targets : o.pool;
     this.demo = Array.from({ length: COLS }, (_, col) => {
       const w = words[col % Math.max(1, words.length)];
-      const lines = w ? fitLines(w.english, TILE_W - 4) : null;
+      const lines = w ? fitLines(w.english, TILE_W - 6) : null;
       return w && lines ? { def: { word: w, lines, correct: false }, col, state: 'idle' } : null;
     });
   }
@@ -420,8 +434,9 @@ export class InvadersEngine {
       return;
     }
     this.waveStyle = plan.style;
-    this.rows = plan.prompts.map((prompt) => ({
+    this.rows = plan.prompts.map((prompt, i) => ({
       prompt,
+      hull: i % HULLS.length,
       tiles: prompt.tiles.map((def, col) => (def ? { def, col, state: 'idle' as const } : null)),
     }));
     this.frontY = SPAWN_Y;
@@ -1034,7 +1049,7 @@ export class InvadersEngine {
       const bottom = this.rowBottom(i);
       if (bottom <= HUD_H) continue;
       for (const tile of this.rows[i].tiles) {
-        if (tile) this.drawTile(ctx, tile, this.tileX(tile.col), bottom - TILE_H, i === 0 && this.phase === 'wave', this.rows[i].prompt.kind === 'D');
+        if (tile) this.drawTile(ctx, tile, this.tileX(tile.col), bottom - TILE_H, i === 0 && this.phase === 'wave', this.rows[i].prompt.kind === 'D', this.rows[i].hull);
       }
     }
     const frame = Math.floor(this.time * 8) % 2;
@@ -1083,7 +1098,7 @@ export class InvadersEngine {
     ctx.fillRect(x + w - 1, y, 1, h);
   }
 
-  private drawTile(ctx: CanvasRenderingContext2D, tile: LiveTile, tx: number, ty: number, live: boolean, ufo: boolean) {
+  private drawTile(ctx: CanvasRenderingContext2D, tile: LiveTile, tx: number, ty: number, live: boolean, ufo: boolean, hullIndex: number) {
     if (tile.state === 'hit') return;
     if (tile.state === 'scanned') {
       // Removed by SCAN: just a dotted ghost of where the word was.
@@ -1110,46 +1125,83 @@ export class InvadersEngine {
       ? Math.sin(Math.min(1, (this.stateT - pulseStart) / PULSE_SEC) * Math.PI)
       : 0;
 
-    let edge: string = live ? (ufo ? P.amber : P.cyan) : P.cyanDim;
-    let ink: string = live ? P.white : P.grey;
-    let fill: string = P.night;
-    if (live && tile.state === 'wrong') { edge = P.red; ink = P.grey; }
+    const wrong = live && tile.state === 'wrong';
+    let hull = wrong ? WRONG_HULL : ufo ? UFO_HULL : HULLS[hullIndex % HULLS.length];
+    let screen = SCREEN;
+    let ink: string = wrong ? P.grey : P.white;
     if (glow > 0) {
-      edge = P.amber;
-      fill = glow > 0.6 ? P.amber : glow > 0.25 ? P.amberDark : P.night;
+      hull = { body: P.amber, shade: P.amberDark, edge: P.amberPale, dome: P.amberPale };
+      screen = glow > 0.6 ? P.amber : glow > 0.25 ? P.amberDark : SCREEN;
       ink = glow > 0.6 ? P.black : P.white;
     }
 
-    ctx.fillStyle = fill;
-    ctx.fillRect(x, y, TILE_W, TILE_H);
-    this.outline(ctx, x, y, TILE_W, TILE_H, edge);
-    // Antennae and legs step with the march — the tile is the invader.
+    const W_ = TILE_W;
+    const H_ = TILE_H;
     const f = this.marchFrame;
-    ctx.fillStyle = edge;
-    ctx.fillRect(x + 8 + 2 * f, y - 2, 1, 1);
-    ctx.fillRect(x + 9, y - 1, 1, 1);
-    ctx.fillRect(x + TILE_W - 9 - 2 * f, y - 2, 1, 1);
-    ctx.fillRect(x + TILE_W - 10, y - 1, 1, 1);
-    ctx.fillRect(x + 4, y + TILE_H, 1, 1);
-    ctx.fillRect(x + 3 + 2 * f, y + TILE_H + 1, 1, 1);
-    ctx.fillRect(x + TILE_W - 5, y + TILE_H, 1, 1);
-    ctx.fillRect(x + TILE_W - 4 - 2 * f, y + TILE_H + 1, 1, 1);
+    const cx = x + W_ / 2;
+    const twoLines = tile.def.lines.length === 2;
+    // Rows behind the live one ride dimmed, so the row you're answering pops.
+    ctx.save();
+    if (!live) ctx.globalAlpha = 0.45;
 
-    if (live && tile.state === 'wrong') {
-      // Wrong is marked by shape as well as colour: struck corners.
-      ctx.fillStyle = P.red;
-      for (let i = 1; i <= 3; i++) {
-        ctx.fillRect(x + 1 + i, y + 1 + i, 1, 1);
-        ctx.fillRect(x + TILE_W - 2 - i, y + 1 + i, 1, 1);
-        ctx.fillRect(x + 1 + i, y + TILE_H - 2 - i, 1, 1);
-        ctx.fillRect(x + TILE_W - 2 - i, y + TILE_H - 2 - i, 1, 1);
+    // Hull: gold outline with clipped corners, coloured body, darker belly band.
+    ctx.fillStyle = hull.edge;
+    ctx.fillRect(x + 1, y, W_ - 2, H_);
+    ctx.fillRect(x, y + 1, W_, H_ - 2);
+    ctx.fillStyle = hull.body;
+    ctx.fillRect(x + 2, y + 1, W_ - 4, H_ - 2);
+    ctx.fillRect(x + 1, y + 2, W_ - 2, H_ - 4);
+    ctx.fillStyle = hull.shade;
+    ctx.fillRect(x + 2, y + H_ - 5, W_ - 4, 3);
+
+    // Cockpit dome in the gap above, with eyes that glance side to side.
+    ctx.fillStyle = hull.dome;
+    ctx.fillRect(cx - 3, y - 3, 6, 1);
+    ctx.fillRect(cx - 5, y - 2, 10, 1);
+    ctx.fillRect(cx - 7, y - 1, 14, 1);
+    ctx.fillStyle = P.black;
+    ctx.fillRect(cx - 3 + f, y - 2, 1, 1);
+    ctx.fillRect(cx + 2 + f, y - 2, 1, 1);
+
+    // Claws in the side gaps, stepping with the march.
+    ctx.fillStyle = hull.edge;
+    const clawRows = f ? [11, 12] : [7, 16];
+    for (const r of clawRows) {
+      ctx.fillRect(x - 1, y + r, 1, 1);
+      ctx.fillRect(x + W_, y + r, 1, 1);
+    }
+
+    // The word's screen: dark (or glowing) panel so the text stays readable.
+    const sy = twoLines ? y + 1 : y + 3;
+    const sh = twoLines ? H_ - 2 : H_ - 9;
+    ctx.fillStyle = screen;
+    ctx.fillRect(x + 4, sy, W_ - 8, sh);
+    ctx.fillRect(x + 3, sy + 1, W_ - 6, sh - 2);
+
+    // Running lights along the belly, alternating with the march (≤ 2 Hz).
+    if (!twoLines) {
+      for (let i = 0, lx = x + 6; lx < x + W_ - 6; i++, lx += 7) {
+        ctx.fillStyle = (i + f) % 2 === 0 ? P.white : hull.edge;
+        ctx.fillRect(lx, y + H_ - 4, 2, 1);
       }
     }
+
+    if (wrong) {
+      // Wrong is marked by shape as well as colour: struck corners on the screen.
+      ctx.fillStyle = P.red;
+      for (let i = 0; i < 3; i++) {
+        ctx.fillRect(x + 4 + i, sy + 1 + i, 1, 1);
+        ctx.fillRect(x + W_ - 5 - i, sy + 1 + i, 1, 1);
+        ctx.fillRect(x + 4 + i, sy + sh - 2 - i, 1, 1);
+        ctx.fillRect(x + W_ - 5 - i, sy + sh - 2 - i, 1, 1);
+      }
+    }
+
     const lines = tile.def.lines;
-    const cx = x + TILE_W / 2;
-    if (lines.length === 1) drawText(ctx, lines[0], cx, y + 6, ink, 1, 'center');
+    if (lines.length === 1) drawText(ctx, lines[0], cx, y + 5, ink, 1, 'center');
     else lines.forEach((line, i) => drawText(ctx, line, cx, y + 1 + i * 11, ink, 1, 'center'));
-    if (glow > 0) drawText(ctx, '▲', cx, y + TILE_H + 1, P.amber, 1, 'center');
+    ctx.restore();
+    if (glow > 0) drawText(ctx, '▲', cx, y + H_ + 1, P.amber, 1, 'center');
   }
 
   private drawSaucer(ctx: CanvasRenderingContext2D) {
@@ -1341,7 +1393,7 @@ export class InvadersEngine {
     lines.forEach((line, i) => drawText(ctx, line, W / 2, 20 + i * 34, i === 0 ? P.amber : P.cyan, ts, 'center'));
 
     this.demo.forEach((tile) => {
-      if (tile) this.drawTile(ctx, tile, this.tileX(tile.col), 96, true, false);
+      if (tile) this.drawTile(ctx, tile, this.tileX(tile.col), 96, true, false, tile.col);
     });
 
     drawText(ctx, `${t('inv.hiScore')} ${pad6(this.best)}`, W / 2, 132, P.amberPale, 1, 'center');
