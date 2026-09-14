@@ -155,8 +155,10 @@ export const STRINGS = {
   'complete.gameOver': 'Game over — your progress is saved',
   'complete.score': 'Score: {score}',
   'complete.rankingScore': 'Ranking your score…',
-  'complete.scoreRank': 'Rank #{rank} of {total}',
-  'complete.highScore': '🏆 New high score!',
+  // scoreRank / rankingScore are shared with SpeedMatch (same meaning); highScore
+  // there means "high score to beat", so a new best gets its own key.
+  'complete.scoreRank': 'Score rank: #{rank} of {total}',
+  'complete.newHighScore': '🏆 New high score!',
   'complete.practice': 'Practice run — not on the leaderboard',
   'complete.accuracy': '{pct}% correct · answered: {n}',
 

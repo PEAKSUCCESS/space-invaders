@@ -94,6 +94,7 @@ type PowerUp = 'slow' | 'scan' | 'echo';
 const POWER_LABEL: Record<PowerUp, StringKey> = { slow: 'inv.slow', scan: 'inv.scan', echo: 'inv.echo' };
 const POWER_NOTE: Record<PowerUp, StringKey> = { slow: 'inv.slowNote', scan: 'inv.scanNote', echo: 'inv.echoNote' };
 const NOTE_SEC = 2.4;
+const NOTE_Y = CANNON_TOP - 30; // clear of the SHIELDS DOWN / SLOW status line
 
 interface LiveTile { def: TileDef; col: number; state: 'idle' | 'wrong' | 'scanned' | 'hit' }
 interface Row { prompt: Prompt; tiles: Array<LiveTile | null> }
@@ -455,7 +456,7 @@ export class InvadersEngine {
     if (this.scanPending) {
       this.scanPending = false;
       this.applyScan(row);
-      this.float(this.cannonX, CANNON_TOP - 12, t('inv.scanNote'), P.cyan, NOTE_SEC);
+      this.float(this.cannonX, NOTE_Y, t('inv.scanNote'), P.cyan, NOTE_SEC);
     }
     this.o.onLive(row.prompt.target);
     if (row.prompt.kind === 'D' && !this.saucer) {
@@ -752,7 +753,7 @@ export class InvadersEngine {
     if (this.audio) sfxPowerUp();
     const row = this.rows[0];
     // Say what it does, not just its name — and long enough to read.
-    const note = (k: PowerUp) => this.float(this.cannonX, CANNON_TOP - 12, t(POWER_NOTE[k]), P.cyan, NOTE_SEC);
+    const note = (k: PowerUp) => this.float(this.cannonX, NOTE_Y, t(POWER_NOTE[k]), P.cyan, NOTE_SEC);
     if (kind === 'slow') {
       this.slowT = SLOW_SEC;
       note('slow');
@@ -768,7 +769,7 @@ export class InvadersEngine {
         note('scan');
       } else {
         this.scanPending = true;
-        this.float(this.cannonX, CANNON_TOP - 12, t('inv.scanNextNote'), P.cyan, NOTE_SEC);
+        this.float(this.cannonX, NOTE_Y, t('inv.scanNextNote'), P.cyan, NOTE_SEC);
       }
     }
   }
@@ -1249,12 +1250,16 @@ export class InvadersEngine {
   }
 
   private drawBrief(ctx: CanvasRenderingContext2D) {
-    this.panel(ctx, 40, 70, 240, 92, P.cyanDim);
-    drawText(ctx, t('inv.wave', { n: this.wave, total: this.o.waves }), W / 2, 76, P.amber, 3, 'center');
+    const title = t('inv.wave', { n: this.wave, total: this.o.waves });
     const label = t(ROUND_LABEL[this.waveStyle]);
-    drawText(ctx, label, W / 2, 110, P.cyan, fitScale([label], 230, 2), 'center');
-    drawText(ctx, t(BRIEF_LINE[this.waveStyle]), W / 2, 134, P.white, 1, 'center');
+    const line = t(BRIEF_LINE[this.waveStyle]);
     const info = this.practice ? t('inv.noClock') : t('inv.waveInfo', { n: this.o.promptsPerWave });
+    // Translations run long (Spanish especially), so the box grows to fit its text.
+    const w = Math.min(W - 8, Math.max(240, measure(line) + 16, measure(info) + 16));
+    this.panel(ctx, Math.round((W - w) / 2), 70, w, 92, P.cyanDim);
+    drawText(ctx, title, W / 2, 76, P.amber, fitScale([title], w - 12, 3), 'center');
+    drawText(ctx, label, W / 2, 110, P.cyan, fitScale([label], w - 12, 2), 'center');
+    drawText(ctx, line, W / 2, 134, P.white, 1, 'center');
     drawText(ctx, info, W / 2, 147, P.silver, 1, 'center');
   }
 

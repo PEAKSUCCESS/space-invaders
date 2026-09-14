@@ -54,7 +54,7 @@ export function LessonComplete({
             <div className="lesson-complete-rank muted">{t('complete.rankingScore')}</div>
           ) : rank != null ? (
             <div className="lesson-complete-rank">
-              {rank === 1 ? t('complete.highScore') : t('complete.scoreRank', { rank, total: total ?? rank })}
+              {rank === 1 ? t('complete.newHighScore') : t('complete.scoreRank', { rank, total: total ?? rank })}
             </div>
           ) : null}
         </>

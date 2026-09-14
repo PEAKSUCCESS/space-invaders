@@ -5,7 +5,9 @@
 // lowercase x-height (accents over lowercase use rows 2–3), rows 9–10 descenders.
 // Glyph art below starts at row 2. Accented letters are composed at runtime from
 // the NFD base + mark, so á é í ó ú ñ ü ç à â ã … all render without drawing each.
-// Characters with no glyph fall back to their NFD base, then to '?'.
+// Text with any character the bitmap can't draw (Japanese, Korean, …) is set
+// whole in a system font instead — crisp, because the game canvas's backing store
+// runs at device resolution — rather than as a row of '?'.
 
 export const LINE_H = 11;
 const SPACING = 1;
@@ -170,6 +172,34 @@ function composeGlyph(ch: string): Glyph {
   return g;
 }
 
+/** Whether the bitmap font can draw this character (directly or composed). */
+function hasGlyph(ch: string): boolean {
+  if (GLYPHS[ch]) return true;
+  const nfd = ch.normalize('NFD');
+  return !!GLYPHS[nfd[0]] && [...nfd.slice(1)].every((m) => MARKS[m]);
+}
+
+const bitmapSafe = new Map<string, boolean>();
+function isBitmapText(text: string): boolean {
+  let ok = bitmapSafe.get(text);
+  if (ok === undefined) {
+    ok = [...text].every(hasGlyph);
+    if (bitmapSafe.size > 2000) bitmapSafe.clear();
+    bitmapSafe.set(text, ok);
+  }
+  return ok;
+}
+
+// The system-font fallback, sized so its glyphs sit in the same 11-row cell.
+const FALLBACK_PX = 10;
+const FALLBACK_FONT = '"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Apple SD Gothic Neo", "Noto Sans JP", "Noto Sans KR", "Yu Gothic", "Malgun Gothic", system-ui, sans-serif';
+let measureCtx: CanvasRenderingContext2D | null = null;
+function fallbackWidth(text: string): number {
+  measureCtx ??= document.createElement('canvas').getContext('2d')!;
+  measureCtx.font = `600 ${FALLBACK_PX}px ${FALLBACK_FONT}`;
+  return Math.ceil(measureCtx.measureText(text).width);
+}
+
 function glyph(ch: string): Glyph {
   let g = glyphCache.get(ch);
   if (!g) {
@@ -181,6 +211,7 @@ function glyph(ch: string): Glyph {
 
 /** Pixel width of a string at 1×. */
 export function measure(text: string): number {
+  if (!isBitmapText(text)) return fallbackWidth(text);
   let w = 0;
   let n = 0;
   for (const ch of text) {
@@ -224,6 +255,16 @@ export function drawText(
   scale = 1, align: Align = 'left',
 ) {
   if (!text) return;
+  if (!isBitmapText(text)) {
+    ctx.save();
+    ctx.font = `600 ${FALLBACK_PX * scale}px ${FALLBACK_FONT}`;
+    ctx.fillStyle = color;
+    ctx.textAlign = align;
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x, y + (LINE_H * scale) / 2 + 0.5 * scale);
+    ctx.restore();
+    return;
+  }
   const c = textCanvas(text, color);
   const w = c.width * scale;
   const left = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
@@ -231,7 +272,8 @@ export function drawText(
 }
 
 /** Lay text into at most two lines no wider than maxW (split at the space
- *  nearest the middle). Returns null when it can't fit — that item isn't tile-safe. */
+ *  nearest the middle, or between characters for fallback-font text). Returns
+ *  null when it can't fit — that item isn't tile-safe. */
 export function fitLines(text: string, maxW: number): string[] | null {
   if (measure(text) <= maxW) return [text];
   const spaces: number[] = [];
@@ -242,6 +284,16 @@ export function fitLines(text: string, maxW: number): string[] | null {
     const a = text.slice(0, i);
     const b = text.slice(i + 1);
     if (measure(a) <= maxW && measure(b) <= maxW) return [a, b];
+  }
+  // Japanese (and other text set in the fallback font) wraps between characters.
+  if (!isBitmapText(text)) {
+    const chars = [...text];
+    const order = chars.map((_, i) => i).filter((i) => i > 0).sort((p, q) => Math.abs(p - chars.length / 2) - Math.abs(q - chars.length / 2));
+    for (const i of order) {
+      const a = chars.slice(0, i).join('').trim();
+      const b = chars.slice(i).join('').trim();
+      if (a && b && measure(a) <= maxW && measure(b) <= maxW) return [a, b];
+    }
   }
   return null;
 }
