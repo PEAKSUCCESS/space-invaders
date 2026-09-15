@@ -128,6 +128,12 @@ export function sfxWaveClear() {
 /** Cannon lost / UFO down. */
 export function sfxExplosion() { noiseSweep(900, 60, 0.7, 0.7); }
 
+/** A ship lets a bomb go — a short falling whistle, kept quiet. */
+export function sfxBombDrop() { tone('triangle', 740, 330, 0, 0.16, 0.05); }
+
+/** A bomb chips the shields. */
+export function sfxShieldHit() { noiseSweep(1800, 400, 0.12, 0.2); }
+
 /** Power-up collected. */
 export function sfxPowerUp() {
   [660, 880, 1320].forEach((f, i) => tone('triangle', f, f * 1.02, i * 0.05, 0.08, 0.14));

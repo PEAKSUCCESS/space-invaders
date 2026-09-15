@@ -18,7 +18,7 @@ import {
   type Outcome, type PlanContext, type Prompt, type RoundKind, type Style, type TileDef,
 } from './invaders';
 import {
-  sfxCorrect, sfxExplosion, sfxFire, sfxMarch, sfxPowerUp, sfxTimeout, sfxUfo, sfxWaveClear, sfxWrong,
+  sfxBombDrop, sfxCorrect, sfxExplosion, sfxFire, sfxMarch, sfxPowerUp, sfxShieldHit, sfxTimeout, sfxUfo, sfxWaveClear, sfxWrong,
 } from '../lib/sound';
 import { t } from '../i18n/i18n';
 
@@ -51,7 +51,24 @@ const PINEAPPLE_SPEED = 26;
 const PERFECT_BONUS = 1000;
 const SHIELDS_DOWN_MULT = 1.25;
 const CANNONS = 3;
-const SHIELD_SEGS: Array<[number, number]> = [[4, 76], [84, 156], [164, 236], [244, 316]];
+// One bunker under each word column (centres 36 / 98 / 160 / 222 / 284), with the
+// gaps between columns — so a cannon parked under a word is covered until that
+// bunker wears through.
+const SHIELD_SEGS: Array<[number, number]> = [[4, 63], [71, 125], [133, 187], [195, 249], [257, 316]];
+// Shields are pixel bunkers, eroded one crater at a time. They sit between the
+// formation's breach line and the cannon, so a bomb only reaches the cannon
+// through a gap or a hole it (or earlier bombs) blasted.
+const SHIELD_TOP = SHIELD_Y - 1;
+const SHIELD_ROWS = 5;
+const SHIELD_STANDING = 0.15;          // a bunker with less than this left counts as destroyed
+// The ships' own bombs: slow enough to dodge, a small crater each. Only the live
+// row drops them, and never in practice.
+const SHIP_BOMB_SPEED = 80;
+const SHIP_BOMB_MAX = 3;
+const SHIP_BOMB_CRATER = 3;
+const WRONG_BOMB_CRATER = 8;
+const SHIP_BOMB_EVERY = [2.8, 2.3, 1.9, 1.6, 1.4]; // seconds between drops, by ramp tier
+const SHIP_BOMB_GRACE = 2.5;                     // quiet seconds at the start of each wave
 const START_BTN = { x: 90, y: 150, w: 140, h: 17 };
 const PRACTICE_BTN = { x: 90, y: 172, w: 140, h: 17 };
 
@@ -114,7 +131,7 @@ interface LiveTile { def: TileDef; col: number; state: 'idle' | 'wrong' | 'scann
 interface Row { prompt: Prompt; tiles: Array<LiveTile | null>; hull: number }
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; colors: readonly string[] }
 interface Floater { x: number; y: number; text: string; color: string; t: number; life: number }
-interface Bomb { x: number; y: number; vx: number; seg: number }
+interface Bomb { x: number; y: number; vx: number; vy: number; big: boolean }
 interface Saucer { x: number; dir: 1 | -1; kind: 'ufo' | 'pineapple'; stop: () => void }
 interface Capsule { x: number; y: number; kind: PowerUp }
 
@@ -197,8 +214,9 @@ export class InvadersEngine {
   private streak = 0;
   private bestStreak = 0;
   private cannons = CANNONS;
-  private shields = [true, true, true, true];
+  private bunkers: Uint8Array[] = SHIELD_SEGS.map(() => new Uint8Array(0));
   private shieldsDown = false;
+  private bombT = 0;
   private slowT = 0;
   private scanPending = false;
   private wavesCleared = 0;
@@ -394,7 +412,7 @@ export class InvadersEngine {
     this.streak = 0;
     this.bestStreak = 0;
     this.cannons = CANNONS;
-    this.shields = [true, true, true, true];
+    this.resetBunkers();
     this.wavesCleared = 0;
     this.gameOver = false;
     this.shieldsDown = false;
@@ -442,6 +460,7 @@ export class InvadersEngine {
     this.frontY = SPAWN_Y;
     this.offset = -150; // the formation drops in from above during the brief
     this.shieldsDown = false;
+    this.bombT = SHIP_BOMB_GRACE;
     this.waveLog = [];
     this.promptState = 'idle';
     this.bullet = null;
@@ -493,7 +512,7 @@ export class InvadersEngine {
     this.perfect = this.waveLog.length > 0 && this.waveLog.every((e) => e.outcome === 'correct' || e.outcome === 'correct_slow');
     if (this.perfect) {
       this.score += PERFECT_BONUS;
-      this.shields = [true, true, true, true];
+      this.resetBunkers();
     }
     this.phase = 'waveClear';
     this.phaseT = 0;
@@ -662,10 +681,11 @@ export class InvadersEngine {
     const answer = row.tiles.find((x) => x?.def.correct);
     const seg = this.nearestShield(answer ? this.tileX(answer.col) + TILE_W / 2 : W / 2);
     if (seg >= 0) {
-      this.shields[seg] = false;
+      // The row slams into the nearest standing bunker and flattens it.
+      this.bunkers[seg].fill(0);
       const [a, z] = SHIELD_SEGS[seg];
-      this.burstRect(a, SHIELD_Y, z - a, 3, [P.white, P.cyan, P.cyanDim], 24);
-      if (this.shields.every((on) => !on)) this.shieldsDown = true;
+      this.burstRect(a, SHIELD_TOP, z - a, SHIELD_ROWS, [P.white, P.cyan, P.cyanDim], 30);
+      this.checkShieldsDown();
     } else {
       this.breachCannon = true;
     }
@@ -692,10 +712,82 @@ export class InvadersEngine {
     else this.startPrompt();
   }
 
+  /** A wrong shot's punishment: a fast bomb aimed at the nearest standing bunker. */
   private dropBomb(x: number, y: number) {
     const seg = this.nearestShield(x);
     const tx = seg >= 0 ? (SHIELD_SEGS[seg][0] + SHIELD_SEGS[seg][1]) / 2 : x;
-    this.bombs.push({ x, y, vx: (tx - x) / Math.max(0.1, (SHIELD_Y - y) / BOMB_SPEED), seg });
+    this.bombs.push({ x, y, vx: (tx - x) / Math.max(0.1, (SHIELD_TOP - y) / BOMB_SPEED), vy: BOMB_SPEED, big: true });
+  }
+
+  /** The live row's ships bomb the cannon: roughly half the time from the ship
+   *  closest above it, otherwise from any of them. */
+  private dropShipBomb() {
+    const row = this.rows[0];
+    const bottom = this.rowBottom(0);
+    if (!row || bottom < HUD_H + 12) return;
+    const ships = row.tiles.filter((x): x is LiveTile => !!x && x.state === 'idle');
+    if (ships.length === 0) return;
+    const centre = (x: LiveTile) => this.tileX(x.col) + TILE_W / 2;
+    const shooter = Math.random() < 0.5
+      ? ships.reduce((a, b) => (Math.abs(centre(a) - this.cannonX) <= Math.abs(centre(b) - this.cannonX) ? a : b))
+      : ships[Math.floor(Math.random() * ships.length)];
+    const x = Math.round(centre(shooter) + (Math.random() * 16 - 8));
+    this.bombs.push({ x, y: bottom + 5, vx: 0, vy: SHIP_BOMB_SPEED, big: false });
+    if (this.audio) sfxBombDrop();
+  }
+
+  private resetBunkers() {
+    this.bunkers = SHIELD_SEGS.map(([a, b]) => {
+      const w = b - a;
+      const px = new Uint8Array(w * SHIELD_ROWS);
+      for (let r = 0; r < SHIELD_ROWS; r++) {
+        const inset = r === 0 ? 2 : r === 1 ? 1 : 0; // rounded top corners
+        for (let c = inset; c < w - inset; c++) px[r * w + c] = 1;
+      }
+      return px;
+    });
+  }
+
+  private bunkerLeft(i: number): number {
+    const px = this.bunkers[i];
+    let n = 0;
+    for (let k = 0; k < px.length; k++) n += px[k];
+    return px.length > 0 ? n / px.length : 0;
+  }
+
+  private checkShieldsDown() {
+    if (SHIELD_SEGS.every((_, i) => this.bunkerLeft(i) < SHIELD_STANDING)) this.shieldsDown = true;
+  }
+
+  /** Blast a ragged crater out of whatever bunker pixels lie within r of (cx, cy). */
+  private erode(cx: number, cy: number, r: number) {
+    SHIELD_SEGS.forEach(([a, b], i) => {
+      if (cx + r < a || cx - r >= b) return;
+      const w = b - a;
+      const px = this.bunkers[i];
+      for (let row = 0; row < SHIELD_ROWS; row++) {
+        for (let c = 0; c < w; c++) {
+          const dx = a + c - cx;
+          const dy = SHIELD_TOP + row - cy;
+          if (dx * dx + dy * dy <= (r - Math.random() * 0.9) ** 2) px[row * w + c] = 0;
+        }
+      }
+    });
+    this.burstRect(cx - 2, cy - 1, 4, 3, [P.white, P.cyan, P.cyanDim], 6 + r * 2);
+    this.checkShieldsDown();
+  }
+
+  /** The bunker row a bomb at (x, tip) has run into, or -1 if its column is open. */
+  private bunkerHit(x: number, tip: number): number {
+    const seg = SHIELD_SEGS.findIndex(([a, b]) => x >= a && x < b);
+    if (seg < 0 || tip < SHIELD_TOP) return -1;
+    const [a, b] = SHIELD_SEGS[seg];
+    const w = b - a;
+    const deepest = Math.min(SHIELD_ROWS - 1, Math.floor(tip - SHIELD_TOP));
+    for (let row = 0; row <= deepest; row++) {
+      if (this.bunkers[seg][row * w + (x - a)]) return row;
+    }
+    return -1;
   }
 
   private nearestShield(x: number): number {
@@ -703,7 +795,7 @@ export class InvadersEngine {
     let bestD = Infinity;
     SHIELD_SEGS.forEach(([a, b], i) => {
       const d = Math.abs((a + b) / 2 - x);
-      if (this.shields[i] && d < bestD) {
+      if (this.bunkerLeft(i) >= SHIELD_STANDING && d < bestD) {
         best = i;
         bestD = d;
       }
@@ -892,6 +984,12 @@ export class InvadersEngine {
         // The words only move while a prompt is live, and the answer waits until
         // they're right on top of the cannon.
         if (!this.practice) {
+          this.bombT -= dt * (this.slowT > 0 ? 0.5 : 1);
+          if (this.bombT <= 0) {
+            const tier = [2, 5, 8, 11].filter((w) => this.wave > w).length;
+            this.bombT = SHIP_BOMB_EVERY[tier] * (0.7 + Math.random() * 0.6);
+            if (this.bombs.filter((b) => !b.big).length < SHIP_BOMB_MAX) this.dropShipBomb();
+          }
           const speed = this.descentSpeed * (this.shieldsDown ? SHIELDS_DOWN_MULT : 1) * (this.slowT > 0 ? 0.5 : 1);
           this.frontY = Math.min(SHIELD_Y, this.frontY + speed * dt);
           if (this.frontY >= SHIELD_Y) this.timeout();
@@ -962,22 +1060,27 @@ export class InvadersEngine {
   }
 
   private updateBombs(dt: number) {
-    for (const bomb of this.bombs) {
-      bomb.x += bomb.vx * dt;
-      bomb.y += BOMB_SPEED * dt;
-    }
-    const landed = this.bombs.filter((b) => b.y >= SHIELD_Y);
-    this.bombs = this.bombs.filter((b) => b.y < SHIELD_Y);
-    for (const b of landed) {
-      // Each wrong shot burns one segment; with none left the formation speeds up.
-      const seg = this.shields[b.seg] ? b.seg : this.nearestShield(b.x);
-      if (seg >= 0) {
-        this.shields[seg] = false;
-        const [a, z] = SHIELD_SEGS[seg];
-        this.burstRect(a, SHIELD_Y, z - a, 3, [P.white, P.cyan, P.cyanDim], 24);
+    const flying: Bomb[] = [];
+    let cannonHit = false;
+    for (const b of this.bombs) {
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      const x = Math.round(b.x);
+      const row = this.bunkerHit(x, b.y);
+      if (row >= 0) {
+        // Shields take the hit; each bomb bites a crater out of them.
+        this.erode(x, SHIELD_TOP + row, b.big ? WRONG_BOMB_CRATER : SHIP_BOMB_CRATER);
+        if (this.audio) sfxShieldHit();
+        continue;
       }
-      if (this.shields.every((on) => !on)) this.shieldsDown = true;
+      if (b.y >= CANNON_TOP + 1 && b.y < CANNON_TOP + 9 && Math.abs(x - this.cannonX) <= 6 && this.lostT <= 0 && !this.gameOver && !this.practice) {
+        cannonHit = true; // through a gap or a blasted hole
+        continue;
+      }
+      if (b.y < BAR_Y) flying.push(b);
     }
+    this.bombs = flying;
+    if (cannonHit && this.phase === 'wave') this.loseCannon();
   }
 
   private updateSaucer(dt: number) {
@@ -1053,7 +1156,7 @@ export class InvadersEngine {
       }
     }
     const frame = Math.floor(this.time * 8) % 2;
-    for (const b of this.bombs) sprite(ctx, BOMB_ART[frame], Math.round(b.x) - 1, Math.round(b.y) - 5, P.red);
+    for (const b of this.bombs) sprite(ctx, BOMB_ART[frame], Math.round(b.x) - 1, Math.round(b.y) - 5, b.big ? P.red : P.amberPale);
     if (this.bullet) {
       ctx.fillStyle = P.amberPale;
       ctx.fillRect(this.bullet.x, Math.round(this.bullet.y), 1, 4);
@@ -1228,14 +1331,20 @@ export class InvadersEngine {
 
   private drawShields(ctx: CanvasRenderingContext2D) {
     SHIELD_SEGS.forEach(([a, b], i) => {
-      if (this.shields[i]) {
-        ctx.fillStyle = P.cyan;
-        ctx.fillRect(a, SHIELD_Y + 1, b - a, 1);
-        ctx.fillStyle = P.cyanDim;
-        for (let x = a; x < b; x += 2) ctx.fillRect(x, SHIELD_Y + 2, 1, 1);
-      } else {
-        ctx.fillStyle = P.cyanDark;
-        for (let x = a; x < b; x += 4) ctx.fillRect(x, SHIELD_Y + 1, 2, 1);
+      const w = b - a;
+      const px = this.bunkers[i];
+      for (let row = 0; row < SHIELD_ROWS; row++) {
+        ctx.fillStyle = row < 3 ? P.cyan : P.cyanDim;
+        // Runs of standing pixels, so a ragged bunker is a handful of rects.
+        let start = -1;
+        for (let c = 0; c <= w; c++) {
+          const on = c < w && px[row * w + c] === 1;
+          if (on && start < 0) start = c;
+          if (!on && start >= 0) {
+            ctx.fillRect(a + start, SHIELD_TOP + row, c - start, 1);
+            start = -1;
+          }
+        }
       }
     });
   }
