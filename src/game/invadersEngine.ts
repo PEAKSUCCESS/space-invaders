@@ -61,13 +61,18 @@ const SHIELD_SEGS: Array<[number, number]> = [[4, 63], [71, 125], [133, 187], [1
 const SHIELD_TOP = SHIELD_Y - 1;
 const SHIELD_ROWS = 5;
 const SHIELD_STANDING = 0.15;          // a bunker with less than this left counts as destroyed
-// The ships' own bombs: slow enough to dodge, a small crater each. Only the live
-// row drops them, and never in practice.
-const SHIP_BOMB_SPEED = 80;
-const SHIP_BOMB_MAX = 3;
-const SHIP_BOMB_CRATER = 3;
+// The ships' own bombs: a small crater each. Only the live row drops them, and
+// never in practice. Most are aimed — angled at where the cannon is when they
+// drop — so standing still doesn't work; the rest fall straight from any ship.
+const SHIP_BOMB_SPEED = 110;
+const SHIP_BOMB_MAX = 5;
+const SHIP_BOMB_AIMED = 0.6;           // share of bombs aimed at the cannon
+const SHIP_BOMB_MAX_DRIFT = 45;        // px/s — how steeply an aimed bomb can angle
+const SHIP_BOMB_SPREAD = 9;           // aimed bombs land within ±this of the cannon, not on one pixel
+const SHIP_BOMB_CRATER = 2;
 const WRONG_BOMB_CRATER = 8;
-const SHIP_BOMB_EVERY = [2.8, 2.3, 1.9, 1.6, 1.4]; // seconds between drops, by ramp tier
+const BREACH_CRATER = 12;              // a row landing on the shields blasts a big hole, not the whole bunker
+const SHIP_BOMB_EVERY = [2.0, 1.6, 1.35, 1.15, 1.0]; // seconds between drops, by ramp tier
 const SHIP_BOMB_GRACE = 2.5;                     // quiet seconds at the start of each wave
 const START_BTN = { x: 90, y: 150, w: 140, h: 17 };
 const PRACTICE_BTN = { x: 90, y: 172, w: 140, h: 17 };
@@ -681,11 +686,10 @@ export class InvadersEngine {
     const answer = row.tiles.find((x) => x?.def.correct);
     const seg = this.nearestShield(answer ? this.tileX(answer.col) + TILE_W / 2 : W / 2);
     if (seg >= 0) {
-      // The row slams into the nearest standing bunker and flattens it.
-      this.bunkers[seg].fill(0);
+      // The row slams into the nearest standing bunker and blasts a big hole in it.
       const [a, z] = SHIELD_SEGS[seg];
+      this.erode(Math.round((a + z) / 2), SHIELD_TOP, BREACH_CRATER);
       this.burstRect(a, SHIELD_TOP, z - a, SHIELD_ROWS, [P.white, P.cyan, P.cyanDim], 30);
-      this.checkShieldsDown();
     } else {
       this.breachCannon = true;
     }
@@ -715,12 +719,15 @@ export class InvadersEngine {
   /** A wrong shot's punishment: a fast bomb aimed at the nearest standing bunker. */
   private dropBomb(x: number, y: number) {
     const seg = this.nearestShield(x);
-    const tx = seg >= 0 ? (SHIELD_SEGS[seg][0] + SHIELD_SEGS[seg][1]) / 2 : x;
+    // Somewhere along the bunker, not its middle — the middle is where a cannon
+    // parked under that word sits, and one spot shouldn't take every hit.
+    const tx = seg >= 0 ? SHIELD_SEGS[seg][0] + 8 + Math.random() * (SHIELD_SEGS[seg][1] - SHIELD_SEGS[seg][0] - 16) : x;
     this.bombs.push({ x, y, vx: (tx - x) / Math.max(0.1, (SHIELD_TOP - y) / BOMB_SPEED), vy: BOMB_SPEED, big: true });
   }
 
-  /** The live row's ships bomb the cannon: roughly half the time from the ship
-   *  closest above it, otherwise from any of them. */
+  /** The live row's ships bomb the cannon. An aimed bomb drops from the ship
+   *  closest above the cannon and angles toward where the cannon is right now;
+   *  the rest fall straight down from a random ship. */
   private dropShipBomb() {
     const row = this.rows[0];
     const bottom = this.rowBottom(0);
@@ -728,11 +735,16 @@ export class InvadersEngine {
     const ships = row.tiles.filter((x): x is LiveTile => !!x && x.state === 'idle');
     if (ships.length === 0) return;
     const centre = (x: LiveTile) => this.tileX(x.col) + TILE_W / 2;
-    const shooter = Math.random() < 0.5
+    const aimed = Math.random() < SHIP_BOMB_AIMED;
+    const shooter = aimed
       ? ships.reduce((a, b) => (Math.abs(centre(a) - this.cannonX) <= Math.abs(centre(b) - this.cannonX) ? a : b))
       : ships[Math.floor(Math.random() * ships.length)];
     const x = Math.round(centre(shooter) + (Math.random() * 16 - 8));
-    this.bombs.push({ x, y: bottom + 5, vx: 0, vy: SHIP_BOMB_SPEED, big: false });
+    const y = bottom + 5;
+    const fallSec = Math.max(0.2, (CANNON_TOP - y) / SHIP_BOMB_SPEED);
+    const aimX = this.cannonX + (Math.random() * 2 - 1) * SHIP_BOMB_SPREAD;
+    const vx = aimed ? Math.max(-SHIP_BOMB_MAX_DRIFT, Math.min(SHIP_BOMB_MAX_DRIFT, (aimX - x) / fallSec)) : 0;
+    this.bombs.push({ x, y, vx, vy: SHIP_BOMB_SPEED, big: false });
     if (this.audio) sfxBombDrop();
   }
 
@@ -790,6 +802,32 @@ export class InvadersEngine {
     return -1;
   }
 
+  /** Shield pixels standing over a cannon parked at x (its 13px width, all rows). */
+  private coverAt(x: number): number {
+    let n = 0;
+    for (let cx = x - 6; cx <= x + 6; cx++) {
+      const seg = SHIELD_SEGS.findIndex(([a, b]) => cx >= a && cx < b);
+      if (seg < 0) continue;
+      const [a, b] = SHIELD_SEGS[seg];
+      for (let r = 0; r < SHIELD_ROWS; r++) n += this.bunkers[seg][r * (b - a) + (cx - a)];
+    }
+    return n;
+  }
+
+  /** The best-covered cannon position, preferring ones near `from` on ties. */
+  private bestCoverX(from: number): number {
+    let best = from;
+    let bestN = -1;
+    for (let x = 10; x <= W - 10; x++) {
+      const n = this.coverAt(x) * 1000 - Math.abs(x - from);
+      if (n > bestN) {
+        bestN = n;
+        best = x;
+      }
+    }
+    return best;
+  }
+
   private nearestShield(x: number): number {
     let best = -1;
     let bestD = Infinity;
@@ -822,6 +860,12 @@ export class InvadersEngine {
     }
     this.float(W / 2, SHIELD_Y - 20, t('inv.cannonLost'), P.red);
     this.lostT = LOST_SEC;
+    this.bombT = SHIP_BOMB_GRACE - 0.5; // a fresh cannon gets a moment before the bombing resumes
+    // …and rolls in under the best cover left (not just the nearest bunker, whose
+    // middle may be drilled out), so one open hole can't take every cannon in a row.
+    this.cannonX = this.bestCoverX(this.cannonX);
+    this.seekX = null;
+    this.fireOnArrive = false;
     return false;
   }
 

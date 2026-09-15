@@ -32,13 +32,14 @@ export interface WaveTier {
 // the answer is revealed only when the words reach the shield line above the
 // cannon, so approachSec is the most time a fresh row gives you. A correct shot
 // buys back one row (28px), so answering within 28px ÷ (160px ÷ approachSec)
-// holds ground — 2.8s in waves 1–2, 1.4s at 12+; slower answers let it creep.
+// holds ground — 3.1s in waves 1–2, 1.6s at 12+; slower answers let it creep.
 const RAMP: Array<{ upTo: number; tier: WaveTier }> = [
-  { upTo: 2, tier: { approachSec: 16, rule: 'offTopic', newPerEight: 4 } },
-  { upTo: 5, tier: { approachSec: 13, rule: 'sameTopic', newPerEight: 3 } },
-  { upTo: 8, tier: { approachSec: 11, rule: 'formTrap', newPerEight: 2 } },
-  { upTo: 11, tier: { approachSec: 9, rule: 'lemma', newPerEight: 2 } },
-  { upTo: Infinity, tier: { approachSec: 8, rule: 'misses', newPerEight: 1 } },
+  // (10% slower than the first tuning: 16 / 13 / 11 / 9 / 8s, each ÷ 0.9.)
+  { upTo: 2, tier: { approachSec: 17.8, rule: 'offTopic', newPerEight: 4 } },
+  { upTo: 5, tier: { approachSec: 14.4, rule: 'sameTopic', newPerEight: 3 } },
+  { upTo: 8, tier: { approachSec: 12.2, rule: 'formTrap', newPerEight: 2 } },
+  { upTo: 11, tier: { approachSec: 10, rule: 'lemma', newPerEight: 2 } },
+  { upTo: Infinity, tier: { approachSec: 8.9, rule: 'misses', newPerEight: 1 } },
 ];
 
 export function tierFor(wave: number): WaveTier {
