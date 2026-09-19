@@ -34,6 +34,7 @@ const SAUCER_Y = HUD_H + 2;       // clear of the front row at spawn (its top ed
 const FORM_LEFT = 7;
 const MARCH_RANGE = 4;          // lateral drift, px either side
 const BULLET_SPEED = 300;
+const MAX_BULLETS = 2;          // shots in flight at once (the arcade original allowed 1)
 const BOMB_SPEED = 260;
 const CANNON_SPEED = 150;
 const SEEK_SPEED = 280;         // tap-to-aim glide
@@ -264,7 +265,7 @@ export class InvadersEngine {
   private padAxis = 0;
   private padFire = false;
   private padStart = false;
-  private bullet: { x: number; y: number } | null = null;
+  private bullets: { x: number; y: number }[] = [];
   private bombs: Bomb[] = [];
   private saucer: Saucer | null = null;
   private capsule: Capsule | null = null;
@@ -468,7 +469,7 @@ export class InvadersEngine {
     this.bombT = SHIP_BOMB_GRACE;
     this.waveLog = [];
     this.promptState = 'idle';
-    this.bullet = null;
+    this.bullets = [];
     this.bombs = [];
     this.phase = 'brief';
     this.phaseT = 0;
@@ -484,7 +485,7 @@ export class InvadersEngine {
   private startPrompt() {
     const row = this.rows[0];
     // A shot or tap still pending from the last prompt must not grade this one.
-    this.bullet = null;
+    this.bullets = [];
     this.fireOnArrive = false;
     this.promptState = 'live';
     this.promptT = 0;
@@ -511,7 +512,7 @@ export class InvadersEngine {
     this.clearSaucer();
     this.capsule = null;
     this.bombs = [];
-    this.bullet = null;
+    this.bullets = [];
     this.shieldsDown = false;
     this.promptState = 'idle';
     this.perfect = this.waveLog.length > 0 && this.waveLog.every((e) => e.outcome === 'correct' || e.outcome === 'correct_slow');
@@ -611,8 +612,8 @@ export class InvadersEngine {
   }
 
   private fire(): boolean {
-    if (this.phase !== 'wave' || this.promptState !== 'live' || this.lostT > 0 || this.bullet) return false;
-    this.bullet = { x: Math.round(this.cannonX), y: CANNON_TOP - 3 };
+    if (this.phase !== 'wave' || this.promptState !== 'live' || this.lostT > 0 || this.bullets.length >= MAX_BULLETS) return false;
+    this.bullets.push({ x: Math.round(this.cannonX), y: CANNON_TOP - 3 });
     if (this.audio) sfxFire();
     return true;
   }
@@ -846,7 +847,7 @@ export class InvadersEngine {
     this.cannons--;
     this.burstRect(this.cannonX - 6, CANNON_TOP, 13, 8, [P.white, P.amber, P.red, P.amberDark], 36);
     this.shakeT = 0.35;
-    this.bullet = null;
+    this.bullets = [];
     this.bombs = [];
     if (this.audio) sfxExplosion();
     if (this.cannons <= 0) {
@@ -1013,7 +1014,7 @@ export class InvadersEngine {
     this.easeOffset(dt);
     this.updateMarch(dt, Math.max(0.28, 0.62 - (this.descentSpeed - 10) * 0.02) * (this.slowT > 0 ? 1.6 : 1));
     this.slowT = Math.max(0, this.slowT - dt);
-    this.updateBullet(dt);
+    this.updateBullets(dt);
     this.updateBombs(dt);
     this.updateSaucer(dt);
 
@@ -1068,15 +1069,18 @@ export class InvadersEngine {
     }
     this.cannonX = Math.max(7, Math.min(W - 7, this.cannonX));
     if (this.fireOnArrive && this.seekX === null) {
-      // Wait out a bullet still in flight, briefly, rather than dropping the tap.
+      // Both shots in flight: wait briefly for one to land rather than dropping the tap.
       this.fireWaitT += dt;
       if (this.fire() || this.fireWaitT > 0.8) this.fireOnArrive = false;
     }
   }
 
-  private updateBullet(dt: number) {
-    const b = this.bullet;
-    if (!b) return;
+  private updateBullets(dt: number) {
+    this.bullets = this.bullets.filter((b) => this.moveBullet(b, dt));
+  }
+
+  /** Advances one shot; false once it has hit something or left the field. */
+  private moveBullet(b: { x: number; y: number }, dt: number): boolean {
     b.y -= BULLET_SPEED * dt;
     const row = this.rows[0];
     if (row && this.promptState === 'live' && this.lostT <= 0) {
@@ -1086,21 +1090,19 @@ export class InvadersEngine {
           if (!tile || tile.state !== 'idle') continue;
           const x = this.tileX(tile.col);
           if (b.x >= x && b.x < x + TILE_W) {
-            this.bullet = null;
             this.hitTile(tile);
-            return;
+            return false;
           }
         }
       }
     }
     const s = this.saucer;
     if (s && b.x >= s.x && b.x < s.x + 16 && b.y <= SAUCER_Y + 7 && b.y + 4 >= SAUCER_Y - 3) {
-      this.bullet = null;
       if (s.kind === 'pineapple') this.findPineapple();
       else this.hitUfo();
-      return;
+      return false;
     }
-    if (b.y < HUD_H) this.bullet = null;
+    return b.y >= HUD_H;
   }
 
   private updateBombs(dt: number) {
@@ -1201,10 +1203,8 @@ export class InvadersEngine {
     }
     const frame = Math.floor(this.time * 8) % 2;
     for (const b of this.bombs) sprite(ctx, BOMB_ART[frame], Math.round(b.x) - 1, Math.round(b.y) - 5, b.big ? P.red : P.amberPale);
-    if (this.bullet) {
-      ctx.fillStyle = P.amberPale;
-      ctx.fillRect(this.bullet.x, Math.round(this.bullet.y), 1, 4);
-    }
+    ctx.fillStyle = P.amberPale;
+    for (const b of this.bullets) ctx.fillRect(b.x, Math.round(b.y), 1, 4);
     this.drawShields(ctx);
     // A fresh cannon blinks in at 2 Hz — nothing on screen flashes faster than 3 Hz.
     if (!this.gameOver && (this.lostT <= 0 || Math.floor(this.lostT * 4) % 2 === 0)) {
