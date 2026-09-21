@@ -465,7 +465,7 @@ export class InvadersEngine {
     }));
     this.frontY = SPAWN_Y;
     this.offset = -150; // the formation drops in from above during the brief
-    this.shieldsDown = false;
+    this.checkShieldsDown();
     this.bombT = SHIP_BOMB_GRACE;
     this.waveLog = [];
     this.promptState = 'idle';
@@ -513,13 +513,11 @@ export class InvadersEngine {
     this.capsule = null;
     this.bombs = [];
     this.bullets = [];
-    this.shieldsDown = false;
     this.promptState = 'idle';
     this.perfect = this.waveLog.length > 0 && this.waveLog.every((e) => e.outcome === 'correct' || e.outcome === 'correct_slow');
-    if (this.perfect) {
-      this.score += PERFECT_BONUS;
-      this.resetBunkers();
-    }
+    // A perfect wave pays a bonus but no longer rebuilds the bunkers: whatever
+    // the shields have left carries into the next wave, for the whole session.
+    if (this.perfect) this.score += PERFECT_BONUS;
     this.phase = 'waveClear';
     this.phaseT = 0;
     this.o.onLive(null);
@@ -768,8 +766,10 @@ export class InvadersEngine {
     return px.length > 0 ? n / px.length : 0;
   }
 
+  /** Authoritative: the bunkers now carry across waves, so a new wave asks this
+   *  rather than assuming it starts with cover. */
   private checkShieldsDown() {
-    if (SHIELD_SEGS.every((_, i) => this.bunkerLeft(i) < SHIELD_STANDING)) this.shieldsDown = true;
+    this.shieldsDown = SHIELD_SEGS.every((_, i) => this.bunkerLeft(i) < SHIELD_STANDING);
   }
 
   /** Blast a ragged crater out of whatever bunker pixels lie within r of (cx, cy). */
