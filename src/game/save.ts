@@ -5,6 +5,9 @@ const KEY = 'peakvocabSpaceInvadersSave';
 // (animating to the new value) instead of starting at 0. Kept separate from the
 // profile save so the frequent profile writes never clobber it.
 const KEY_PROGRESS = 'peakvocabSpaceInvadersProgress';
+// This device's best Space Invaders score, so the attract screen's HI-SCORE
+// shows something before (or without) the server leaderboard.
+const KEY_HI_SCORE = 'peakvocabSpaceInvadersHiScore';
 
 export interface SaveState extends Profile {
   /** How many lessons this shopper has finished (gates the progress %). */
@@ -78,6 +81,23 @@ export function loadProgress(): ProgressResponse | null {
 export function writeProgress(p: ProgressResponse) {
   try {
     localStorage.setItem(KEY_PROGRESS, JSON.stringify(p));
+  } catch {
+    /* ignore storage errors */
+  }
+}
+
+export function loadHighScore(): number {
+  try {
+    const n = Number(localStorage.getItem(KEY_HI_SCORE));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function writeHighScore(score: number) {
+  try {
+    if (score > loadHighScore()) localStorage.setItem(KEY_HI_SCORE, String(score));
   } catch {
     /* ignore storage errors */
   }
