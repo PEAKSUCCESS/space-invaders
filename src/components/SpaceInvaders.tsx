@@ -160,7 +160,12 @@ export function SpaceInvaders(props: Props) {
     const fit = () => {
       const dpr = window.devicePixelRatio || 1;
       const k = Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
-      const scale = dpr >= 2 ? k : Math.max(1, Math.floor(k * dpr)) / dpr;
+      // Snapping to whole device pixels keeps the pixel art even, but on a 1x
+      // screen (or one zoomed to a fractional DPR) it can throw away most of the
+      // room — a 150% zoom used to round 1.33 down to 0.67. So snap only when it
+      // costs little, and otherwise fill the space we have.
+      const snapped = Math.floor(k * dpr) / dpr;
+      const scale = dpr >= 2 || snapped < k * 0.8 ? k : snapped;
       canvas.style.width = `${W * scale}px`;
       canvas.style.height = `${H * scale}px`;
       const backing = Math.min(8, Math.max(1, Math.ceil(scale * dpr - 0.01)));
