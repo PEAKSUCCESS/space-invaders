@@ -66,14 +66,14 @@ const SHIELD_STANDING = 0.15;          // a bunker with less than this left coun
 // never in practice. Most are aimed — angled at where the cannon is when they
 // drop — so standing still doesn't work; the rest fall straight from any ship.
 const SHIP_BOMB_SPEED = 110;
-const SHIP_BOMB_MAX = 5;
+const SHIP_BOMB_MAX = 10;      // raised with the drop rate so the cap never throttles it
 const SHIP_BOMB_AIMED = 0.6;           // share of bombs aimed at the cannon
 const SHIP_BOMB_MAX_DRIFT = 45;        // px/s — how steeply an aimed bomb can angle
 const SHIP_BOMB_SPREAD = 9;           // aimed bombs land within ±this of the cannon, not on one pixel
-const SHIP_BOMB_CRATER = 2;
+const SHIP_BOMB_CRATER = 4;
 const WRONG_BOMB_CRATER = 8;
 const BREACH_CRATER = 12;              // a row landing on the shields blasts a big hole, not the whole bunker
-const SHIP_BOMB_EVERY = [2.0, 1.6, 1.35, 1.15, 1.0]; // seconds between drops, by ramp tier
+const SHIP_BOMB_EVERY = [1.0, 0.8, 0.675, 0.575, 0.5]; // seconds between drops, by ramp tier
 const SHIP_BOMB_GRACE = 2.5;                     // quiet seconds at the start of each wave
 const START_BTN = { x: 90, y: 150, w: 140, h: 17 };
 const PRACTICE_BTN = { x: 90, y: 172, w: 140, h: 17 };
@@ -465,7 +465,7 @@ export class InvadersEngine {
     }));
     this.frontY = SPAWN_Y;
     this.offset = -150; // the formation drops in from above during the brief
-    this.shieldsDown = false;
+    this.checkShieldsDown();
     this.bombT = SHIP_BOMB_GRACE;
     this.waveLog = [];
     this.promptState = 'idle';
@@ -513,13 +513,11 @@ export class InvadersEngine {
     this.capsule = null;
     this.bombs = [];
     this.bullets = [];
-    this.shieldsDown = false;
     this.promptState = 'idle';
     this.perfect = this.waveLog.length > 0 && this.waveLog.every((e) => e.outcome === 'correct' || e.outcome === 'correct_slow');
-    if (this.perfect) {
-      this.score += PERFECT_BONUS;
-      this.resetBunkers();
-    }
+    // A perfect wave pays a bonus but no longer rebuilds the bunkers: whatever
+    // the shields have left carries into the next wave, for the whole session.
+    if (this.perfect) this.score += PERFECT_BONUS;
     this.phase = 'waveClear';
     this.phaseT = 0;
     this.o.onLive(null);
@@ -768,8 +766,10 @@ export class InvadersEngine {
     return px.length > 0 ? n / px.length : 0;
   }
 
+  /** Authoritative: the bunkers now carry across waves, so a new wave asks this
+   *  rather than assuming it starts with cover. */
   private checkShieldsDown() {
-    if (SHIELD_SEGS.every((_, i) => this.bunkerLeft(i) < SHIELD_STANDING)) this.shieldsDown = true;
+    this.shieldsDown = SHIELD_SEGS.every((_, i) => this.bunkerLeft(i) < SHIELD_STANDING);
   }
 
   /** Blast a ragged crater out of whatever bunker pixels lie within r of (cx, cy). */
