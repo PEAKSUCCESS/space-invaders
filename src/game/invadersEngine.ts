@@ -1469,12 +1469,11 @@ export class InvadersEngine {
   }
 
   private drawWaveClear(ctx: CanvasRenderingContext2D) {
-    this.panel(ctx, 40, 80, 240, this.perfect ? 72 : 48, P.greenDark);
+    this.panel(ctx, 40, 80, 240, this.perfect ? 60 : 48, P.greenDark);
     const title = t('inv.waveClear');
     drawText(ctx, title, W / 2, 88, P.green, fitScale([title], 230, 3), 'center');
     if (this.perfect) {
       drawText(ctx, t('inv.perfect', { bonus: PERFECT_BONUS }), W / 2, 122, P.amber, 1, 'center');
-      drawText(ctx, t('inv.shieldsRepaired'), W / 2, 136, P.cyan, 1, 'center');
     }
   }
 
