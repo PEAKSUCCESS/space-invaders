@@ -2,5 +2,9 @@
   "waterRisePerSec": 0.9,
   "climbStep": 4.3,
   "wrongSurge": 3,
-  "parTimeMs": 75000
+  "parTimeMs": 75000,
+  "waves": 7,
+  "promptsPerWave": 8,
+  "descentScale": 1,
+  "approachScale": 1
 }

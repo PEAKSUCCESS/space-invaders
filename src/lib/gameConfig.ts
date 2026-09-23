@@ -12,6 +12,11 @@ export interface GameConfig {
   climbStep: number;       // % the climber rises per correct answer
   wrongSurge: number;      // % the water jumps on a wrong answer
   parTimeMs: number;       // countdown-dial target (ms) when there's no leaderboard best yet
+  // Space Invaders
+  waves: number;           // waves per session
+  promptsPerWave: number;  // prompts (formation rows) per wave
+  descentScale: number;    // × the words' descent speed — the speed knob
+  approachScale: number;   // × the ramp's seconds for a row to reach the shields (the answer is revealed there)
 }
 
 export const DEFAULT_CONFIG: GameConfig = {
@@ -19,6 +24,10 @@ export const DEFAULT_CONFIG: GameConfig = {
   climbStep: 4.3,
   wrongSurge: 3,
   parTimeMs: 75000,
+  waves: 7,
+  promptsPerWave: 8,
+  descentScale: 1,
+  approachScale: 1,
 };
 
 const CONFIG_URL = (import.meta.env.VITE_CONFIG_URL as string | undefined) || '/config.json';
@@ -39,6 +48,10 @@ export async function loadGameConfig(): Promise<GameConfig> {
       climbStep: num(j.climbStep, DEFAULT_CONFIG.climbStep),
       wrongSurge: num(j.wrongSurge, DEFAULT_CONFIG.wrongSurge),
       parTimeMs: num(j.parTimeMs, DEFAULT_CONFIG.parTimeMs),
+      waves: Math.max(1, Math.round(num(j.waves, DEFAULT_CONFIG.waves))),
+      promptsPerWave: Math.max(1, Math.round(num(j.promptsPerWave, DEFAULT_CONFIG.promptsPerWave))),
+      descentScale: Math.max(0, num(j.descentScale, DEFAULT_CONFIG.descentScale)),
+      approachScale: Math.max(0.2, num(j.approachScale, DEFAULT_CONFIG.approachScale)),
     };
   } catch {
     return DEFAULT_CONFIG;
