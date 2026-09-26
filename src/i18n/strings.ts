@@ -62,11 +62,11 @@ export const STRINGS = {
   'chrome.giveFeedback': 'Give feedback',
   'chrome.quit': 'Quit',
   'chrome.skip': 'Skip this one ⏭',
-  'chrome.removeWord': 'Remove this word from my lessons ✓',
+  'chrome.removeWord': 'I know this word. Mark it as "Mastered" and do not show it to me again.',
   'chrome.loading': 'Loading…',
 
   // Challenge type labels
-  'challenge.invaders': 'Space Invaders',
+  'challenge.invaders': 'Space Attack',
   'challenge.asteroids': 'Asteroids',
   'challenge.climb': 'Climb to Safety',
   'challenge.match': 'Matching Tiles',
@@ -79,8 +79,8 @@ export const STRINGS = {
   'challenge.pickHearToEn': 'Pick the Word (heard)',
   'challenge.pickImgToEn': 'Pick the Word (image)',
 
-  // Space Invaders (drawn in the canvas bitmap font — Latin script only)
-  'inv.title': 'SPACE INVADERS',
+  // Space Attack (drawn in the canvas bitmap font — Latin script only)
+  'inv.title': 'SPACE ATTACK',
   'inv.hiScore': 'HI-SCORE',
   'inv.start': 'START',
   'inv.practice': 'PRACTICE · NO RUSH',
@@ -100,7 +100,6 @@ export const STRINGS = {
   'inv.noClock': 'THE WORDS WAIT FOR YOU',
   'inv.waveClear': 'WAVE CLEAR',
   'inv.perfect': 'PERFECT WAVE +{bonus}',
-  'inv.shieldsRepaired': 'SHIELDS REPAIRED',
   'inv.report': 'WAVE {n} REPORT',
   'inv.reportMissed': 'WORDS YOU MISSED · {i} OF {n}',
   'inv.inEnglish': 'IN ENGLISH',
@@ -122,7 +121,7 @@ export const STRINGS = {
   'inv.exposures': 'WORDS ANSWERED: {n}',
   'inv.bestStreak': 'BEST STREAK: {n} CORRECT IN A ROW',
   'inv.continue': 'SPACE / TAP TO CONTINUE',
-  'inv.a11y': 'Space Invaders game. Arrow keys move, Space fires; or tap a word to shoot it.',
+  'inv.a11y': 'Space Attack game. Arrow keys move, Space fires; or tap a word to shoot it.',
 
   // Asteroids game
   'ast.wave': 'Wave {n}/{total}',
