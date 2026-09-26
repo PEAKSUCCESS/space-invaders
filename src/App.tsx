@@ -39,7 +39,7 @@ function App() {
   // bar keeps its last value across StartScreen remounts and page reloads — it
   // animates 3%→5%, not 0%→5%, each lesson.
   const [progress, setProgress] = useState<ProgressResponse | null>(loadProgress);
-  // Guards the "Remove this word" button against a double-tap (per step).
+  // Guards the "I know this word" button against a double-tap (per step).
   const [removedKey, setRemovedKey] = useState<string | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   // Game timer + flawless tracking, surfaced on the completion screen and sent to
@@ -183,7 +183,8 @@ function App() {
     }
   }
 
-  // "Remove this word from my lessons" — manual completion, then advance.
+  // "I know this word" — manual completion (the word counts as Mastered and
+  // leaves the bin for good), then advance.
   // Confetti + a short delay before advancing so the celebration is visible.
   function handleRemoveWord(senseId: string, stepKey: string) {
     if (removedKey === stepKey) return;

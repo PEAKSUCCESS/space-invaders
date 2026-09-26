@@ -62,7 +62,7 @@ export const STRINGS = {
   'chrome.giveFeedback': 'Give feedback',
   'chrome.quit': 'Quit',
   'chrome.skip': 'Skip this one ⏭',
-  'chrome.removeWord': 'Remove this word from my lessons ✓',
+  'chrome.removeWord': 'I know this word. Mark it as "Mastered" and do not show it to me again.',
   'chrome.loading': 'Loading…',
 
   // Challenge type labels
