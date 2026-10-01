@@ -1,5 +1,5 @@
 // Publish this game's UI-string translations (scripts/ui-strings.json) to the
-// peakvocab-api ui_strings table, so Space Invaders — and its Vocab Hub tile —
+// peakvocab-api ui_strings table, so Space Attack — and its Vocab Hub tile —
 // render in the learner's language like every other game.
 //
 // All strings live in the shared `Challenges` app set. This writes through the
